@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --md-primary: #6750a4;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #eaddff;
+  --md-on-primary-container: #21005d;
+  --md-secondary: #625b71;
+  --md-on-secondary: #ffffff;
+  --md-secondary-container: #e8def8;
+  --md-on-secondary-container: #1d192b;
+  --md-tertiary: #7d5260;
+  --md-on-tertiary: #ffffff;
+  --md-tertiary-container: #ffd8e4;
+  --md-on-tertiary-container: #31111d;
+  --md-surface: #fef7ff;
+  --md-on-surface: #1d1b20;
+  --md-surface-container: #f3edf7;
+  --md-surface-container-high: #ece6f0;
+  --md-on-surface-variant: #49454f;
+  --md-background: #fef7ff;
+  --md-on-background: #1d1b20;
+  --md-surface-variant: #e7e0ec;
+  --md-outline: #79747e;
+  --md-outline-variant: #cac4d0;
+  --md-error: #b3261e;
+  --md-on-error: #ffffff;
+  --md-inverse-surface: #322f35;
+  --md-inverse-on-surface: #f6eff5;
+  --md-inverse-primary: #d0bcff;
+
+  --md-elevation-level0: transparent;
+  --md-elevation-level1: #f3edf7;
+  --md-elevation-level2: #efe8f5;
+  --md-elevation-level3: #ebe3f3;
+  --md-elevation-level4: #e9e1f1;
+  --md-elevation-level5: #e8def0;
+
+  --md-radius-sm: 8px;
+  --md-radius-md: 12px;
+  --md-radius-lg: 24px;
+  --md-radius-full: 9999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-primary: #d0bcff;
+    --md-on-primary: #381e72;
+    --md-primary-container: #4f378b;
+    --md-on-primary-container: #eaddff;
+    --md-secondary: #ccc2dc;
+    --md-on-secondary: #332d41;
+    --md-secondary-container: #4a4458;
+    --md-on-secondary-container: #e8def8;
+    --md-tertiary: #efb8c8;
+    --md-on-tertiary: #492532;
+    --md-tertiary-container: #633b48;
+    --md-on-tertiary-container: #ffd8e4;
+    --md-surface: #141218;
+    --md-on-surface: #e6e1e5;
+    --md-surface-container: #1d1b20;
+    --md-surface-container-high: #28262c;
+    --md-on-surface-variant: #cac4d0;
+    --md-background: #141218;
+    --md-on-background: #e6e1e5;
+    --md-surface-variant: #49454f;
+    --md-outline: #938f99;
+    --md-outline-variant: #49454f;
+    --md-error: #f2b8b5;
+    --md-on-error: #601410;
+    --md-inverse-surface: #e6e1e5;
+    --md-inverse-on-surface: #322f35;
+    --md-inverse-primary: #6750a4;
+
+    --md-elevation-level0: transparent;
+    --md-elevation-level1: #1d1b20;
+    --md-elevation-level2: #221f25;
+    --md-elevation-level3: #27232a;
+    --md-elevation-level4: #29252c;
+    --md-elevation-level5: #2c282f;
+  }
+}
+
+body {
+  margin: 0;
+}
