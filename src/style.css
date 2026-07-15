@@ -40,6 +40,25 @@
   --md-radius-md: 12px;
   --md-radius-lg: 24px;
   --md-radius-full: 9999px;
+
+  --md-typescale-headline: 28px;
+  --md-typescale-title-large: 22px;
+  --md-typescale-title-medium: 16px;
+  --md-typescale-title-small: 14px;
+  --md-typescale-body-large: 16px;
+  --md-typescale-body-medium: 14px;
+  --md-typescale-body-small: 12px;
+  --md-typescale-label-large: 14px;
+  --md-typescale-label-medium: 12px;
+  --md-letter-spacing: 0.18px;
+
+  --md-space-1: 4px;
+  --md-space-2: 8px;
+  --md-space-3: 12px;
+  --md-space-4: 16px;
+  --md-space-5: 20px;
+  --md-space-6: 24px;
+  --md-space-8: 32px;
 }
 
 @media (prefers-color-scheme: dark) {
