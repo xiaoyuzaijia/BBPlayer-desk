@@ -2,16 +2,17 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { useResizeObserver } from '@vueuse/core'
 import { Vue3Lottie } from 'vue3-lottie'
 import { Icon } from '@iconify/vue'
-import { usePlayerStore } from '../stores/player'
+import { usePlaybackStore } from '../stores/playback'
 import { useThemeStore } from '../stores/theme'
 import { Icons } from '../utils/icons'
-import { formatTime } from '../utils/format'
 import { tintLottieSource } from '../utils/lottie'
 import IconButton from '../components/common/IconButton.vue'
-import MD3Slider from '../components/common/MD3Slider.vue'
+import PlayerProgressBar from '../components/player/PlayerProgressBar.vue'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
+import QueueDrawer from '../components/player/QueueDrawer.vue'
 // Lottie 帧定义：帧 0 = pause（双竖线），帧 7 = play（三角形）
 // 初始化用 goToAndStop 直接定位，切换用 playSegments 播过渡
 import playPauseJson from '../assets/lottie/play-pause.json'
@@ -19,10 +20,11 @@ import skipPrevJson from '../assets/lottie/skip-prev.json'
 import skipNextJson from '../assets/lottie/skip-next.json'
 
 const router = useRouter()
-const player = usePlayerStore()
+// PlayerView 用 playback store 拿控制状态 + 控制动作
+const playback = usePlaybackStore()
 const theme = useThemeStore()
 const { currentTrack, isPlaying, currentTime, hasPrev, hasNext, playMode } =
-  storeToRefs(player)
+  storeToRefs(playback)
 
 // Lottie 染色：根据亮暗模式取对应硬编码颜色（与 style.css 中 --md-* 保持一致）
 // light: primary=#6750a4, on-surface-variant=#49454f
@@ -66,9 +68,9 @@ watch(isPlaying, (playing) => {
 // 切换播放/暂停
 function togglePlay() {
   if (isPlaying.value) {
-    player.pause()
+    playback.pause()
   } else {
-    player.resume()
+    playback.resume()
   }
 }
 
@@ -76,21 +78,15 @@ function togglePlay() {
 function handlePrev() {
   if (!hasPrev.value) return
   skipPrevRef.value?.playSegments([0, 60], true)
-  player.prev()
+  playback.prev()
 }
 
 // 下一曲：播放 skip-next Lottie 动画
 function handleNext() {
   if (!hasNext.value) return
   skipNextRef.value?.playSegments([0, 60], true)
-  player.next()
+  playback.next()
 }
-
-// 进度条双向绑定：通过 computed setter 走 store action
-const currentTimeModel = computed({
-  get: () => currentTime.value,
-  set: (v: number) => player.seek(v),
-})
 
 // 统一播放模式图标（与 NowPlayingBar 一致）：all → repeat / one → repeatOne / shuffle → shuffle
 // 三态都为激活态，统一用 primary 色
@@ -102,6 +98,22 @@ const playModeIcon = computed(() => {
       return Icons.shuffle
     default:
       return Icons.repeat
+  }
+})
+
+// 队列抽屉开关 + trigger 元素引用（用于 onClickOutside 忽略）
+const queueOpen = ref(false)
+const queueTriggerEl = ref<HTMLElement | null>(null)
+
+// 控制台元素引用 + 宽度（用于 inline 抽屉宽度对齐控制台）
+const consoleEl = ref<HTMLElement | null>(null)
+const consoleWidth = ref(0)
+useResizeObserver(consoleEl, ([entry]) => {
+  consoleWidth.value = entry.contentRect.width
+})
+watch(queueOpen, (open) => {
+  if (open && consoleEl.value && consoleWidth.value === 0) {
+    consoleWidth.value = consoleEl.value.offsetWidth
   }
 })
 </script>
@@ -144,20 +156,15 @@ const playModeIcon = computed(() => {
           </div>
         </div>
 
-        <!-- 控制台：进度条 + 主控制 + 副控制 -->
-        <div class="player__console">
-          <!-- 进度条 + 时间标签 -->
-          <div class="progress">
-            <MD3Slider
-              v-model="currentTimeModel"
-              :max="currentTrack.duration"
-              class="progress__slider"
-            />
-            <div class="progress__time">
-              <span class="progress__current">{{ formatTime(currentTime) }}</span>
-              <span class="progress__duration">{{ formatTime(currentTrack.duration) }}</span>
-            </div>
-          </div>
+        <!-- 控制台：进度条 + 主控制 + 副控制
+            ref + position: relative 作为 inline 队列抽屉的定位参照 -->
+        <div ref="consoleEl" class="player__console">
+          <!-- 进度条 + 时间标签（自绘滑块，scrub 预览与 seek 分离） -->
+          <PlayerProgressBar
+            :current="currentTime"
+            :duration="currentTrack.duration"
+            @seek="playback.seek"
+          />
 
           <!-- 主控制：skip-prev / play-pause / skip-next -->
           <div class="main-controls">
@@ -212,15 +219,34 @@ const playModeIcon = computed(() => {
             </button>
           </div>
 
-          <!-- 副控制：单一循环模式按钮（与 NowPlayingBar 一致）+ 列表按钮 -->
+          <!-- 副控制：单一循环模式按钮（与 NowPlayingBar 一致）+ 列表按钮
+              列表按钮作为队列抽屉 trigger
+              抽屉作为 sub-controls 子元素，bottom 相对 sub-controls 顶部往上，
+              水平居中仍对齐控制台（sub-controls 宽度 = 控制台宽度，因 flex stretch） -->
           <div class="sub-controls">
             <IconButton
               :icon="playModeIcon"
               :size="24"
               color="var(--md-primary)"
-              @click="player.cyclePlayMode()"
+              @click="playback.cyclePlayMode()"
             />
-            <IconButton :icon="Icons.list" :size="24" />
+            <div ref="queueTriggerEl" class="sub-controls__queue-trigger">
+              <IconButton
+                :icon="Icons.list"
+                :size="24"
+                :selected="queueOpen"
+                @click="queueOpen = !queueOpen"
+              />
+            </div>
+
+            <!-- 队列抽屉：inline variant，接着列表按钮这一行往上 -->
+            <QueueDrawer
+              v-if="queueOpen"
+              variant="inline"
+              :trigger="queueTriggerEl"
+              :width="consoleWidth"
+              @close="queueOpen = false"
+            />
           </div>
         </div>
       </section>
@@ -387,23 +413,6 @@ const playModeIcon = computed(() => {
   min-width: 0;
 }
 
-/* ── 进度条 + 时间标签 ── */
-.progress {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.progress__slider {
-  width: 100%;
-}
-.progress__time {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px; /* bodySmall */
-  color: var(--md-on-surface-variant);
-  font-variant-numeric: tabular-nums;
-}
-
 /* ── 主控制：skip-prev / play-pause / skip-next ── */
 .main-controls {
   display: flex;
@@ -461,12 +470,19 @@ const playModeIcon = computed(() => {
   height: 100%;
 }
 
-/* ── 副控制：shuffle + repeat + queue ── */
+/* ── 副控制：shuffle + repeat + queue ──
+   position: relative 作为 inline 队列抽屉的定位参照
+   （让抽屉 bottom 相对 sub-controls 顶部往上，而非控制台顶部） */
 .sub-controls {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 32px;
+}
+/* 队列按钮 trigger 容器 */
+.sub-controls__queue-trigger {
+  display: inline-flex;
 }
 
 /* ── 右侧歌词区：占位 ── */

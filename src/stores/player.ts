@@ -1,136 +1,23 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import type { Track } from '../types/track'
 
-export interface Track {
-  id: string
-  title: string
-  artist: string
-  coverUrl: string
-  duration: number
-}
-
-const fakeQueue: Track[] = [
-  { id: '1', title: '光るなら', artist: 'Goose house', coverUrl: '', duration: 245 },
-  { id: '2', title: 'Only My Railgun', artist: 'fripSide', coverUrl: '', duration: 268 },
-  { id: '3', title: '紅蓮華', artist: 'LiSA', coverUrl: '', duration: 238 },
-  { id: '4', title: '青空のラプソディ', artist: 'fhána', coverUrl: '', duration: 274 },
-]
-
+// ── player store（极简镜像）──
+// 参考 BBPlayer usePlayerStore：只镜像"当前播放曲目 + 当前队列索引"
+// 不承载队列数据、不承载播放控制状态、不放 action
+// 真源在 queue store（队列）+ playback store（控制），本 store 只做派生
 export const usePlayerStore = defineStore('player', () => {
-  const queue = ref<Track[]>(fakeQueue)
+  // 当前播放曲目（直接 ref，由 playback.play 写入）
+  const currentTrack = ref<Track | null>(null)
+  // 当前在队列中的索引（由 playback action 同步写入）
   const queueIndex = ref(0)
-  const isPlaying = ref(false)
-  const currentTime = ref(0)
-  const volume = ref(80)
-  const shuffle = ref(false)
-  // 默认 all（列表循环），不再有 off 态
-  const repeat = ref<'off' | 'all' | 'one'>('all')
 
-  const currentTrack = computed<Track | null>(() => {
-    if (queue.value.length === 0) return null
-    return queue.value[queueIndex.value] ?? null
-  })
-
-  const hasPrev = computed(() => queueIndex.value > 0)
-  const hasNext = computed(() => queueIndex.value < queue.value.length - 1)
-
-  function play(track: Track) {
-    const idx = queue.value.findIndex((t) => t.id === track.id)
-    if (idx !== -1) {
-      queueIndex.value = idx
-    } else {
-      queue.value.push(track)
-      queueIndex.value = queue.value.length - 1
-    }
-    isPlaying.value = true
-    currentTime.value = 0
-  }
-
-  function pause() {
-    isPlaying.value = false
-  }
-
-  function resume() {
-    if (currentTrack.value) {
-      isPlaying.value = true
-    }
-  }
-
-  function next() {
-    if (repeat.value === 'one') {
-      currentTime.value = 0
-      return
-    }
-    if (hasNext.value) {
-      queueIndex.value++
-    } else if (repeat.value === 'all') {
-      queueIndex.value = 0
-    } else {
-      isPlaying.value = false
-      return
-    }
-    isPlaying.value = true
-    currentTime.value = 0
-  }
-
-  function prev() {
-    if (hasPrev.value) {
-      queueIndex.value--
-      isPlaying.value = true
-      currentTime.value = 0
-    }
-  }
-
-  function seek(time: number) {
-    currentTime.value = time
-  }
-
-  function setVolume(v: number) {
-    volume.value = v
-  }
-
-  // 统一的播放模式：把 repeat + shuffle 视作互斥三态
-  // all → one → shuffle → all，UI 按钮只暴露这一个
-  type PlayMode = 'all' | 'one' | 'shuffle'
-  const playMode = computed<PlayMode>(() => {
-    if (shuffle.value) return 'shuffle'
-    return repeat.value === 'one' ? 'one' : 'all'
-  })
-  function cyclePlayMode() {
-    // 直接读底层 ref，避免依赖 computed 的读取时机
-    if (shuffle.value) {
-      // shuffle → all
-      shuffle.value = false
-      repeat.value = 'all'
-    } else if (repeat.value === 'one') {
-      // one → shuffle
-      shuffle.value = true
-      repeat.value = 'all'
-    } else {
-      // all → one
-      repeat.value = 'one'
-    }
-  }
+  // 派生：当前曲目 id（便于列表高亮 selector）
+  const currentTrackId = computed(() => currentTrack.value?.id ?? '')
 
   return {
-    queue,
-    queueIndex,
-    isPlaying,
-    currentTime,
-    volume,
-    shuffle,
-    repeat,
     currentTrack,
-    hasPrev,
-    hasNext,
-    play,
-    pause,
-    resume,
-    next,
-    prev,
-    setVolume,
-    playMode,
-    cyclePlayMode,
-    seek,
+    queueIndex,
+    currentTrackId,
   }
 })

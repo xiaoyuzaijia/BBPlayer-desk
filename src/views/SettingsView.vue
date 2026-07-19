@@ -3,13 +3,14 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useThemeStore } from '../stores/theme'
-import { usePlayerStore } from '../stores/player'
+import { usePlaybackStore } from '../stores/playback'
 import { Icons } from '../utils/icons'
 import MD3Slider from '../components/common/MD3Slider.vue'
 
 const theme = useThemeStore()
-const player = usePlayerStore()
-const { volume } = storeToRefs(player)
+// 音量属于播放控制状态，从 playback store 取
+const playback = usePlaybackStore()
+const { volume } = storeToRefs(playback)
 
 // 主题模式标签映射
 const modeLabels: Record<string, string> = {
@@ -34,7 +35,7 @@ const themeIcon = computed(() =>
 // 音量双向绑定：通过 computed setter 显式调用 store action
 const volumeModel = computed({
   get: () => volume.value,
-  set: (v: number) => player.setVolume(v),
+  set: (v: number) => playback.setVolume(v),
 })
 
 // 关于分组数据

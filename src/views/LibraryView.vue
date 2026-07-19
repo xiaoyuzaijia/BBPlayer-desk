@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { Icons } from '../utils/icons'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
+import { usePlaylistStore } from '../stores/playlist'
+import type { Playlist } from '../types/playlist'
+
+const router = useRouter()
+const playlistStore = usePlaylistStore()
 
 // 三个 tab：本地歌单 / B站收藏 / 稍后再看
+// 本地 tab 同时展示 local + synced 两种类型
 const tabs = [
   { key: 'local', label: '本地歌单' },
   { key: 'bilibili', label: 'B站收藏' },
@@ -13,36 +20,39 @@ const tabs = [
 
 const activeTab = ref<(typeof tabs)[number]['key']>('local')
 
-// 列表项类型：封面标题 + 数量 + 状态（pinned 置顶 / cloud 远端 / download 已下载）
-interface PlaylistItem {
-  id: string
-  title: string
-  count: number
-  coverUrl?: string
-  status?: 'pinned' | 'cloud' | 'downloaded'
-}
+// 按 tab 取歌单列表
+const list = computed<Playlist[]>(() => {
+  if (activeTab.value === 'local') {
+    // 本地 tab 同时显示 local + synced
+    return playlistStore.playlists.filter(
+      (p) => p.type === 'local' || p.type === 'synced',
+    )
+  }
+  if (activeTab.value === 'bilibili') {
+    return playlistStore.getPlaylistsByType('favorite')
+  }
+  // 稍后再看
+  return playlistStore.getPlaylistsByType('toview')
+})
 
-// 假数据：每个 tab 独立列表，coverUrl 留空走 CoverPlaceholder 占位符
-const fakePlaylists: Record<string, PlaylistItem[]> = {
-  local: [
-    { id: 'l1', title: '我的歌单', count: 12, status: 'pinned' },
-    { id: 'l2', title: '睡前轻音乐', count: 8, status: 'downloaded' },
-    { id: 'l3', title: '跑步专用', count: 24 },
-    { id: 'l4', title: '通勤路上', count: 15, status: 'downloaded' },
-  ],
-  bilibili: [
-    { id: 'b1', title: 'Vocaloid 精选', count: 40, status: 'cloud' },
-    { id: 'b2', title: '日系燃向合集', count: 48, status: 'cloud' },
-  ],
-  watchlater: [],
-}
-
-// 根据 status 返回对应状态图标
-function statusIcon(status?: PlaylistItem['status']) {
-  if (status === 'pinned') return Icons.pin
-  if (status === 'cloud') return Icons.cloud
-  if (status === 'downloaded') return Icons.downloadDone
+// 根据 playlist.type 与 isPinned 决定状态图标
+function statusIcon(playlist: Playlist): string | null {
+  if (playlist.isPinned) return Icons.pin
+  if (playlist.type === 'synced') return Icons.cloud
+  if (playlist.type === 'favorite' || playlist.type === 'toview') return Icons.cloud
   return null
+}
+
+// 列表项点击：按 type 跳转对应路由
+function goToPlaylist(playlist: Playlist) {
+  if (playlist.type === 'toview') {
+    router.push({ name: 'playlist-toview' })
+  } else if (playlist.type === 'favorite') {
+    router.push({ name: 'playlist-favorite', params: { id: playlist.id } })
+  } else {
+    // local + synced 都走 playlist-local 路由
+    router.push({ name: 'playlist-local', params: { id: playlist.id } })
+  }
 }
 </script>
 
@@ -64,12 +74,13 @@ function statusIcon(status?: PlaylistItem['status']) {
     </nav>
 
     <!-- 列表：封面 + 标题/副标题 + 末尾箭头，Divider 分隔 -->
-    <div v-if="fakePlaylists[activeTab].length > 0" class="list">
+    <div v-if="list.length > 0" class="list">
       <div
-        v-for="(item, idx) in fakePlaylists[activeTab]"
+        v-for="(item, idx) in list"
         :key="item.id"
         class="list-item"
-        :class="{ 'list-item--last': idx === fakePlaylists[activeTab].length - 1 }"
+        :class="{ 'list-item--last': idx === list.length - 1 }"
+        @click="goToPlaylist(item)"
       >
         <!-- 48×48 CoverPlaceholder（coverUrl 留空走占位符） -->
         <CoverPlaceholder
@@ -83,13 +94,13 @@ function statusIcon(status?: PlaylistItem['status']) {
           <div class="list-item__title">{{ item.title }}</div>
           <div class="list-item__subtitle">
             <Icon
-              v-if="statusIcon(item.status)"
-              :icon="statusIcon(item.status)!"
+              v-if="statusIcon(item)"
+              :icon="statusIcon(item)!"
               :width="13"
               :height="13"
               class="list-item__status-icon"
             />
-            <span>{{ item.count }} 首</span>
+            <span>{{ item.tracks.length }} 首</span>
           </div>
         </div>
         <!-- 末尾右箭头 -->

@@ -1,15 +1,35 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { usePlayerStore } from '../../stores/player'
+import { useResizeObserver } from '@vueuse/core'
+import { usePlaybackStore } from '../../stores/playback'
 import { Icons } from '../../utils/icons'
 import IconButton from '../common/IconButton.vue'
 import CoverPlaceholder from '../common/CoverPlaceholder.vue'
+import QueueDrawer from '../player/QueueDrawer.vue'
 
 const router = useRouter()
-const player = usePlayerStore()
-const { currentTrack, isPlaying, currentTime, playMode } = storeToRefs(player)
+// NPB 只关心播放控制状态（currentTrack/isPlaying/currentTime/playMode + 控制动作）
+const playback = usePlaybackStore()
+const { currentTrack, isPlaying, currentTime, playMode } = storeToRefs(playback)
+
+// 队列抽屉开关 + trigger 元素引用（用于 onClickOutside 忽略）
+const queueOpen = ref(false)
+const queueTriggerEl = ref<HTMLElement | null>(null)
+
+// NPB 整体宽度（播放条 + gap + 列表按钮），传给 floating 抽屉让其宽度对齐
+const npbWrapEl = ref<HTMLElement | null>(null)
+const npbWidth = ref(0)
+useResizeObserver(npbWrapEl, ([entry]) => {
+  npbWidth.value = entry.contentRect.width
+})
+// 抽屉打开时确保已测量（首次打开可能比 observer 触发更早）
+watch(queueOpen, (open) => {
+  if (open && npbWrapEl.value && npbWidth.value === 0) {
+    npbWidth.value = npbWrapEl.value.offsetWidth
+  }
+})
 
 // 进度比例 0~1，传给 CSS 变量驱动顶部细线 scaleX
 const progress = computed(() => {
@@ -34,7 +54,7 @@ const playModeIcon = computed(() => {
 <template>
   <!-- 外层容器：横向排列"播放条 + 列表圆按钮"，整体居中 -->
   <Transition name="npb-fade">
-    <div v-if="currentTrack" class="npb-wrap">
+    <div v-if="currentTrack" ref="npbWrapEl" class="npb-wrap">
       <!-- 播放条本体 -->
       <div
         class="npb"
@@ -57,38 +77,53 @@ const playModeIcon = computed(() => {
         </div>
 
         <!-- 右侧控制：repeat + skipPrev + play + skipNext，按钮 @click.stop 防止触发条跳转 -->
-        <IconButton
-          :icon="playModeIcon"
-          :size="24"
-          color="var(--md-primary)"
-          @click.stop="player.cyclePlayMode()"
-        />
-        <IconButton
-          :icon="Icons.skipPrev"
-          :size="24"
-          :disabled="!player.hasPrev"
-          @click.stop="player.prev()"
-        />
-        <IconButton
-          :icon="isPlaying ? Icons.pause : Icons.play"
-          :size="28"
-          @click.stop="isPlaying ? player.pause() : player.resume()"
-        />
-        <IconButton
-          :icon="Icons.skipNext"
-          :size="24"
-          :disabled="!player.hasNext"
-          @click.stop="player.next()"
-        />
+      <IconButton
+        :icon="playModeIcon"
+        :size="24"
+        color="var(--md-primary)"
+        @click.stop="playback.cyclePlayMode()"
+      />
+      <IconButton
+        :icon="Icons.skipPrev"
+        :size="24"
+        :disabled="!playback.hasPrev"
+        @click.stop="playback.prev()"
+      />
+      <IconButton
+        :icon="isPlaying ? Icons.pause : Icons.play"
+        :size="28"
+        @click.stop="isPlaying ? playback.pause() : playback.resume()"
+      />
+      <IconButton
+        :icon="Icons.skipNext"
+        :size="24"
+        :disabled="!playback.hasNext"
+        @click.stop="playback.next()"
+      />
 
         <!-- 顶部进度细线：left/right 24 对齐左右两圆上顶点，transform: scaleX 性能更好 -->
         <span class="npb__progress"></span>
       </div>
 
-      <!-- 右侧独立圆形按钮：外层 48×48 圆形容器（与播放条等高、相同样式）-->
-      <div class="npb-list">
-        <IconButton :icon="Icons.list" :size="24" />
+      <!-- 右侧独立圆形按钮：外层 48×48 圆形容器（与播放条等高、相同样式）
+          作为队列抽屉的 trigger，@click.stop 防止冒泡到 NPB 触发跳转 -->
+      <div ref="queueTriggerEl" class="npb-list">
+        <IconButton
+          :icon="Icons.list"
+          :size="24"
+          :selected="queueOpen"
+          @click.stop="queueOpen = !queueOpen"
+        />
       </div>
+
+      <!-- 队列抽屉：floating variant，悬浮于 NPB 上方，宽度对齐 NPB 整体 -->
+      <QueueDrawer
+        v-if="queueOpen"
+        variant="floating"
+        :trigger="queueTriggerEl"
+        :width="npbWidth"
+        @close="queueOpen = false"
+      />
     </div>
   </Transition>
 </template>
