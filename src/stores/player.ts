@@ -21,6 +21,10 @@ export const usePlayerStore = defineStore('player', () => {
   const queueIndex = ref(0)
   const isPlaying = ref(false)
   const currentTime = ref(0)
+  const volume = ref(80)
+  const shuffle = ref(false)
+  // 默认 all（列表循环），不再有 off 态
+  const repeat = ref<'off' | 'all' | 'one'>('all')
 
   const currentTrack = computed<Track | null>(() => {
     if (queue.value.length === 0) return null
@@ -53,11 +57,20 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function next() {
+    if (repeat.value === 'one') {
+      currentTime.value = 0
+      return
+    }
     if (hasNext.value) {
       queueIndex.value++
-      isPlaying.value = true
-      currentTime.value = 0
+    } else if (repeat.value === 'all') {
+      queueIndex.value = 0
+    } else {
+      isPlaying.value = false
+      return
     }
+    isPlaying.value = true
+    currentTime.value = 0
   }
 
   function prev() {
@@ -68,11 +81,45 @@ export const usePlayerStore = defineStore('player', () => {
     }
   }
 
+  function seek(time: number) {
+    currentTime.value = time
+  }
+
+  function setVolume(v: number) {
+    volume.value = v
+  }
+
+  // 统一的播放模式：把 repeat + shuffle 视作互斥三态
+  // all → one → shuffle → all，UI 按钮只暴露这一个
+  type PlayMode = 'all' | 'one' | 'shuffle'
+  const playMode = computed<PlayMode>(() => {
+    if (shuffle.value) return 'shuffle'
+    return repeat.value === 'one' ? 'one' : 'all'
+  })
+  function cyclePlayMode() {
+    // 直接读底层 ref，避免依赖 computed 的读取时机
+    if (shuffle.value) {
+      // shuffle → all
+      shuffle.value = false
+      repeat.value = 'all'
+    } else if (repeat.value === 'one') {
+      // one → shuffle
+      shuffle.value = true
+      repeat.value = 'all'
+    } else {
+      // all → one
+      repeat.value = 'one'
+    }
+  }
+
   return {
     queue,
     queueIndex,
     isPlaying,
     currentTime,
+    volume,
+    shuffle,
+    repeat,
     currentTrack,
     hasPrev,
     hasNext,
@@ -81,5 +128,9 @@ export const usePlayerStore = defineStore('player', () => {
     resume,
     next,
     prev,
+    setVolume,
+    playMode,
+    cyclePlayMode,
+    seek,
   }
 })

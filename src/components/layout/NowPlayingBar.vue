@@ -1,44 +1,203 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { usePlayerStore } from '../../stores/player'
+import { Icons } from '../../utils/icons'
+import IconButton from '../common/IconButton.vue'
+import CoverPlaceholder from '../common/CoverPlaceholder.vue'
 
 const router = useRouter()
 const player = usePlayerStore()
-const { currentTrack, isPlaying } = storeToRefs(player)
+const { currentTrack, isPlaying, currentTime, playMode } = storeToRefs(player)
+
+// 进度比例 0~1，传给 CSS 变量驱动顶部细线 scaleX
+const progress = computed(() => {
+  if (!currentTrack.value || currentTrack.value.duration <= 0) return 0
+  return Math.min(currentTime.value / currentTrack.value.duration, 1)
+})
+
+// 根据播放模式返回图标（三态都为选中态，统一 primary 色）
+const playModeIcon = computed(() => {
+  switch (playMode.value) {
+    case 'one':
+      return Icons.repeatOne
+    case 'shuffle':
+      return Icons.shuffle
+    default:
+      // all 用 repeat 图标
+      return Icons.repeat
+  }
+})
 </script>
 
 <template>
-  <div
-    v-if="currentTrack"
-    class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 h-14 flex items-center gap-3 px-3 bg-[var(--md-surface-container-high)] rounded-[var(--md-radius-lg)] shadow-lg cursor-pointer select-none"
-    @click="router.push({ name: 'player' })"
-  >
-    <div class="w-12 h-12 rounded-[var(--md-radius-sm)] bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center flex-shrink-0">
-      <span class="text-sm">🎵</span>
+  <!-- 外层容器：横向排列"播放条 + 列表圆按钮"，整体居中 -->
+  <Transition name="npb-fade">
+    <div v-if="currentTrack" class="npb-wrap">
+      <!-- 播放条本体 -->
+      <div
+        class="npb"
+        :style="{ '--npb-progress': progress }"
+        @click="router.push({ name: 'player' })"
+      >
+        <!-- 左端圆形封面：48×48，border-radius 24 = 完整圆，占据胶囊左半圆位置 -->
+        <CoverPlaceholder
+          :title="currentTrack.title"
+          :size="48"
+          :border-radius="24"
+          :cover-url="currentTrack.coverUrl"
+          class="npb__cover"
+        />
+
+        <!-- 中间文字：titleSmall + bodySmall，truncate 单行 -->
+        <div class="npb__text">
+          <span class="npb__title">{{ currentTrack.title }}</span>
+          <span class="npb__artist">{{ currentTrack.artist }}</span>
+        </div>
+
+        <!-- 右侧控制：repeat + skipPrev + play + skipNext，按钮 @click.stop 防止触发条跳转 -->
+        <IconButton
+          :icon="playModeIcon"
+          :size="24"
+          color="var(--md-primary)"
+          @click.stop="player.cyclePlayMode()"
+        />
+        <IconButton
+          :icon="Icons.skipPrev"
+          :size="24"
+          :disabled="!player.hasPrev"
+          @click.stop="player.prev()"
+        />
+        <IconButton
+          :icon="isPlaying ? Icons.pause : Icons.play"
+          :size="28"
+          @click.stop="isPlaying ? player.pause() : player.resume()"
+        />
+        <IconButton
+          :icon="Icons.skipNext"
+          :size="24"
+          :disabled="!player.hasNext"
+          @click.stop="player.next()"
+        />
+
+        <!-- 顶部进度细线：left/right 24 对齐左右两圆上顶点，transform: scaleX 性能更好 -->
+        <span class="npb__progress"></span>
+      </div>
+
+      <!-- 右侧独立圆形按钮：外层 48×48 圆形容器（与播放条等高、相同样式）-->
+      <div class="npb-list">
+        <IconButton :icon="Icons.list" :size="24" />
+      </div>
     </div>
-
-    <div class="flex flex-col min-w-0 mr-2">
-      <span class="text-sm font-semibold text-[var(--md-on-surface)] truncate">
-        {{ currentTrack.title }}
-      </span>
-      <span class="text-xs text-[var(--md-on-surface-variant)] truncate">
-        {{ currentTrack.artist }}
-      </span>
-    </div>
-
-    <button
-      class="text-lg text-[var(--md-on-surface)] select-none"
-      @click.stop="isPlaying ? player.pause() : player.resume()"
-    >
-      {{ isPlaying ? '⏸' : '▶️' }}
-    </button>
-
-    <button
-      class="text-lg text-[var(--md-on-surface-variant)] select-none"
-      @click.stop="player.next()"
-    >
-      ⏭
-    </button>
-  </div>
+  </Transition>
 </template>
+
+<style scoped>
+/* 外层：横向 flex，整体居中固定底部 */
+.npb-wrap {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* BBPlayer 浮动栏规格：高 48、圆角 24、阴影 0 3px 4.65px rgba(0,0,0,0.29)、背景 elevation.level2
+   胶囊形：左端 48 圆封面占据左半圆，右端 24 padding 形成空半圆 */
+.npb {
+  position: relative;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  /* padding-right 6 形成右端空半圆；左侧 0 让封面贴左 */
+  padding: 0 6px 0 0;
+  background: var(--md-surface-container-high);
+  border-radius: 24px;
+  box-shadow: 0 3px 4.65px rgba(0, 0, 0, 0.29);
+  cursor: pointer;
+  user-select: none;
+  min-width: 400px;
+  max-width: 560px;
+}
+
+/* 左端圆形封面：flex-shrink 防止被压缩；z-index:1 让进度条在封面之下 */
+.npb__cover {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.npb__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  margin: 0 8px 0 12px;
+}
+.npb__title {
+  font-size: 14px; /* titleSmall */
+  font-weight: 500;
+  color: var(--md-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.npb__artist {
+  font-size: 12px; /* bodySmall */
+  color: var(--md-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 顶部进度细线：left/right 24 对齐左右两圆的上顶点，2px 高
+   transform-origin: left + scaleX(progress) 比 width 性能更好（不触发 reflow）
+   z-index 默认 auto，封面 z-index:1 让进度条在封面之下 */
+.npb__progress {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 0;
+  height: 2px;
+  background: var(--md-primary);
+  transform-origin: left;
+  transform: scaleX(var(--npb-progress, 0));
+  transition: transform 0.3s linear;
+  pointer-events: none;
+}
+
+/* 右侧独立列表圆按钮：外层 48×48 圆形容器（与播放条等高、相同样式），内含 IconButton
+   IconButton 自带 hover state-layer，用 :deep 让它撑满容器使 state-layer 覆盖整个圆 */
+.npb-list {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--md-surface-container-high);
+  box-shadow: 0 3px 4.65px rgba(0, 0, 0, 0.29);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+/* 让内部 IconButton 撑满 48×48 容器，hover state-layer 覆盖整个圆 */
+.npb-list :deep(.md3-icon-btn) {
+  width: 100%;
+  height: 100%;
+}
+
+/* 出现/消失淡入淡出 */
+.npb-fade-enter-active,
+.npb-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.npb-fade-enter-from,
+.npb-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+}
+</style>
