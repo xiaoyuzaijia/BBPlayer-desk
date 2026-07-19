@@ -52,13 +52,19 @@ async function copyIcon(icon: string) {
 
 <template>
   <div class="p-8 max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold text-md-on-surface mb-2">图标库</h1>
+    <h1 class="text-3xl font-bold text-md-on-surface mb-2">
+      图标库
+    </h1>
     <p class="text-md-on-surface-variant mb-8">
       所有 Icons 常量里的图标。点击卡片可复制图标字符串。
     </p>
 
     <!-- 分组展示：每组一个 section，标题 + 网格 -->
-    <section v-for="group in groups" :key="group.title" class="mb-10">
+    <section
+      v-for="group in groups"
+      :key="group.title"
+      class="mb-10"
+    >
       <h2 class="text-xl font-semibold text-md-on-surface mb-4 border-b border-md-outline-variant pb-2">
         {{ group.title }}
       </h2>
@@ -68,10 +74,14 @@ async function copyIcon(icon: string) {
           :key="item.key"
           type="button"
           class="icon-card group"
-          @click="copyIcon(item.icon)"
           :title="`点击复制：${item.icon}`"
+          @click="copyIcon(item.icon)"
         >
-          <Icon :icon="item.icon" :width="32" :height="32" />
+          <Icon
+            :icon="item.icon"
+            :width="32"
+            :height="32"
+          />
           <span class="icon-key">{{ item.key }}</span>
           <span class="icon-string">{{ item.icon }}</span>
         </button>

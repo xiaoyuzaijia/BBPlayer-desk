@@ -54,7 +54,11 @@ const playModeIcon = computed(() => {
 <template>
   <!-- 外层容器：横向排列"播放条 + 列表圆按钮"，整体居中 -->
   <Transition name="npb-fade">
-    <div v-if="currentTrack" ref="npbWrapEl" class="npb-wrap">
+    <div
+      v-if="currentTrack"
+      ref="npbWrapEl"
+      class="npb-wrap"
+    >
       <!-- 播放条本体 -->
       <div
         class="npb"
@@ -77,37 +81,40 @@ const playModeIcon = computed(() => {
         </div>
 
         <!-- 右侧控制：repeat + skipPrev + play + skipNext，按钮 @click.stop 防止触发条跳转 -->
-      <IconButton
-        :icon="playModeIcon"
-        :size="24"
-        color="var(--md-primary)"
-        @click.stop="playback.cyclePlayMode()"
-      />
-      <IconButton
-        :icon="Icons.skipPrev"
-        :size="24"
-        :disabled="!playback.hasPrev"
-        @click.stop="playback.prev()"
-      />
-      <IconButton
-        :icon="isPlaying ? Icons.pause : Icons.play"
-        :size="28"
-        @click.stop="isPlaying ? playback.pause() : playback.resume()"
-      />
-      <IconButton
-        :icon="Icons.skipNext"
-        :size="24"
-        :disabled="!playback.hasNext"
-        @click.stop="playback.next()"
-      />
+        <IconButton
+          :icon="playModeIcon"
+          :size="24"
+          color="var(--md-primary)"
+          @click.stop="playback.cyclePlayMode()"
+        />
+        <IconButton
+          :icon="Icons.skipPrev"
+          :size="24"
+          :disabled="!playback.hasPrev"
+          @click.stop="playback.prev()"
+        />
+        <IconButton
+          :icon="isPlaying ? Icons.pause : Icons.play"
+          :size="28"
+          @click.stop="isPlaying ? playback.pause() : playback.resume()"
+        />
+        <IconButton
+          :icon="Icons.skipNext"
+          :size="24"
+          :disabled="!playback.hasNext"
+          @click.stop="playback.next()"
+        />
 
         <!-- 顶部进度细线：left/right 24 对齐左右两圆上顶点，transform: scaleX 性能更好 -->
-        <span class="npb__progress"></span>
+        <span class="npb__progress" />
       </div>
 
       <!-- 右侧独立圆形按钮：外层 48×48 圆形容器（与播放条等高、相同样式）
           作为队列抽屉的 trigger，@click.stop 防止冒泡到 NPB 触发跳转 -->
-      <div ref="queueTriggerEl" class="npb-list">
+      <div
+        ref="queueTriggerEl"
+        class="npb-list"
+      >
         <IconButton
           :icon="Icons.list"
           :size="24"

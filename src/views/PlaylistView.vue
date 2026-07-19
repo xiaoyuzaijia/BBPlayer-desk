@@ -78,13 +78,26 @@ function handleTrackMore(track: Track) {
   <div class="playlist-view">
     <!-- 顶栏：返回 + 标题 + 更多（h-14，level1 阴影分界） -->
     <header class="topbar">
-      <IconButton :icon="Icons.chevronLeft" :size="28" @click="goBack" />
-      <h2 class="topbar__title">{{ playlist?.title ?? '歌单' }}</h2>
-      <IconButton :icon="Icons.more" :size="20" @click="handleMore" />
+      <IconButton
+        :icon="Icons.chevronLeft"
+        :size="28"
+        @click="goBack"
+      />
+      <h2 class="topbar__title">
+        {{ playlist?.title ?? '歌单' }}
+      </h2>
+      <IconButton
+        :icon="Icons.more"
+        :size="20"
+        @click="handleMore"
+      />
     </header>
 
     <!-- 主体：Header + TrackList（限宽居中，桌面友好） -->
-    <div v-if="playlist" class="playlist-view__body">
+    <div
+      v-if="playlist"
+      class="playlist-view__body"
+    >
       <PlaylistHeader
         :playlist="playlist"
         @play-all="playAll"
@@ -105,9 +118,17 @@ function handleTrackMore(track: Track) {
     </div>
 
     <!-- 找不到歌单：404 兜底 -->
-    <div v-else class="playlist-view__not-found">
+    <div
+      v-else
+      class="playlist-view__not-found"
+    >
       <p>歌单不存在或已删除</p>
-      <button class="back-btn" @click="goBack">返回</button>
+      <button
+        class="back-btn"
+        @click="goBack"
+      >
+        返回
+      </button>
     </div>
   </div>
 </template>

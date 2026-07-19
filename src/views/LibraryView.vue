@@ -58,7 +58,9 @@ function goToPlaylist(playlist: Playlist) {
 
 <template>
   <div class="library">
-    <h2 class="library__title">音乐库</h2>
+    <h2 class="library__title">
+      音乐库
+    </h2>
 
     <!-- Tab 栏：底部 2px 横线作为 MD3 指示器 -->
     <nav class="tabs">
@@ -74,7 +76,10 @@ function goToPlaylist(playlist: Playlist) {
     </nav>
 
     <!-- 列表：封面 + 标题/副标题 + 末尾箭头，Divider 分隔 -->
-    <div v-if="list.length > 0" class="list">
+    <div
+      v-if="list.length > 0"
+      class="list"
+    >
       <div
         v-for="(item, idx) in list"
         :key="item.id"
@@ -91,7 +96,9 @@ function goToPlaylist(playlist: Playlist) {
         />
         <!-- 标题 + 副标题（含状态图标） -->
         <div class="list-item__text">
-          <div class="list-item__title">{{ item.title }}</div>
+          <div class="list-item__title">
+            {{ item.title }}
+          </div>
           <div class="list-item__subtitle">
             <Icon
               v-if="statusIcon(item)"
@@ -114,9 +121,19 @@ function goToPlaylist(playlist: Playlist) {
     </div>
 
     <!-- 空状态 -->
-    <div v-else class="empty">
-      <Icon :icon="Icons.library" :width="48" :height="48" class="empty__icon" />
-      <p class="empty__text">暂无内容</p>
+    <div
+      v-else
+      class="empty"
+    >
+      <Icon
+        :icon="Icons.library"
+        :width="48"
+        :height="48"
+        class="empty__icon"
+      />
+      <p class="empty__text">
+        暂无内容
+      </p>
     </div>
   </div>
 </template>

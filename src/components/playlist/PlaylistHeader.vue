@@ -71,7 +71,9 @@ const syncLabel = computed(() =>
 
       <!-- 标题 + 元信息 + 描述 -->
       <div class="header__info">
-        <h1 class="header__title">{{ playlist.title }}</h1>
+        <h1 class="header__title">
+          {{ playlist.title }}
+        </h1>
         <div class="header__meta">
           <!-- 类型徽章（小标签） -->
           <span class="header__type-badge">{{ {
@@ -84,7 +86,10 @@ const syncLabel = computed(() =>
           <span class="header__dot">·</span>
           <span>总时长 {{ totalDurationText }}</span>
         </div>
-        <p v-if="playlist.description" class="header__desc">
+        <p
+          v-if="playlist.description"
+          class="header__desc"
+        >
           {{ playlist.description }}
         </p>
       </div>
@@ -93,25 +98,52 @@ const syncLabel = computed(() =>
     <!-- 下半部分：操作按钮行 -->
     <div class="header__actions">
       <!-- 播放全部：FilledButton（primary 背景） -->
-      <button class="btn btn--filled" @click="$emit('playAll')">
-        <Icon :icon="Icons.play" :width="20" :height="20" />
+      <button
+        class="btn btn--filled"
+        @click="$emit('playAll')"
+      >
+        <Icon
+          :icon="Icons.play"
+          :width="20"
+          :height="20"
+        />
         <span>播放全部</span>
       </button>
 
       <!-- 同步：OutlinedButton（仅 synced/favorite/toview 显示） -->
-      <button v-if="showSync" class="btn btn--outlined" @click="$emit('sync')">
-        <Icon :icon="Icons.cloud" :width="20" :height="20" />
+      <button
+        v-if="showSync"
+        class="btn btn--outlined"
+        @click="$emit('sync')"
+      >
+        <Icon
+          :icon="Icons.cloud"
+          :width="20"
+          :height="20"
+        />
         <span>{{ syncLabel }}</span>
       </button>
 
       <!-- 添加歌曲：OutlinedButton（仅 local 显示） -->
-      <button v-if="showAddTrack" class="btn btn--outlined" @click="$emit('addTrack')">
-        <Icon :icon="Icons.add" :width="20" :height="20" />
+      <button
+        v-if="showAddTrack"
+        class="btn btn--outlined"
+        @click="$emit('addTrack')"
+      >
+        <Icon
+          :icon="Icons.add"
+          :width="20"
+          :height="20"
+        />
         <span>添加歌曲</span>
       </button>
 
       <!-- 更多：IconButton -->
-      <IconButton :icon="Icons.more" :size="20" @click="$emit('more')" />
+      <IconButton
+        :icon="Icons.more"
+        :size="20"
+        @click="$emit('more')"
+      />
     </div>
   </header>
 </template>

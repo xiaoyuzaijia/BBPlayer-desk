@@ -62,7 +62,10 @@ function removeAt(index: number) {
 
 <template>
   <!-- floating variant teleport 到 body，避免被祖先 transform 影响定位 -->
-  <Teleport to="body" :disabled="variant !== 'floating'">
+  <Teleport
+    to="body"
+    :disabled="variant !== 'floating'"
+  >
     <Transition :name="`queue-${variant}`">
       <div
         ref="rootRef"
@@ -77,7 +80,10 @@ function removeAt(index: number) {
         </header>
 
         <!-- 列表：可滚动 -->
-        <ul v-if="queue.length > 0" class="queue__list">
+        <ul
+          v-if="queue.length > 0"
+          class="queue__list"
+        >
           <li
             v-for="(track, idx) in queue"
             :key="track.id + '-' + idx"
@@ -107,8 +113,12 @@ function removeAt(index: number) {
 
             <!-- 标题 + 作者 -->
             <div class="queue__text">
-              <div class="queue__track-title">{{ track.title }}</div>
-              <div class="queue__track-artist">{{ track.artist }}</div>
+              <div class="queue__track-title">
+                {{ track.title }}
+              </div>
+              <div class="queue__track-artist">
+                {{ track.artist }}
+              </div>
             </div>
 
             <!-- 删除按钮 -->
@@ -122,9 +132,19 @@ function removeAt(index: number) {
         </ul>
 
         <!-- 空状态 -->
-        <div v-else class="queue__empty">
-          <Icon :icon="Icons.queue" :width="32" :height="32" class="queue__empty-icon" />
-          <p class="queue__empty-text">队列为空</p>
+        <div
+          v-else
+          class="queue__empty"
+        >
+          <Icon
+            :icon="Icons.queue"
+            :width="32"
+            :height="32"
+            class="queue__empty-icon"
+          />
+          <p class="queue__empty-text">
+            队列为空
+          </p>
         </div>
       </div>
     </Transition>

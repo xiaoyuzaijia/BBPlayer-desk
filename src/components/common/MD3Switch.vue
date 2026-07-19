@@ -34,7 +34,7 @@ function toggle() {
     :class="{ 'md3-switch--on': modelValue }"
     @click="toggle"
   >
-    <span class="md3-switch__thumb"></span>
+    <span class="md3-switch__thumb" />
   </button>
 </template>
 

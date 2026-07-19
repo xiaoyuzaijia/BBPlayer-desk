@@ -47,11 +47,15 @@ const aboutItems = [
 
 <template>
   <div class="settings">
-    <h2 class="settings__title">设置</h2>
+    <h2 class="settings__title">
+      设置
+    </h2>
 
     <!-- ── 外观分组 ── -->
     <section class="group">
-      <h3 class="group__title">外观</h3>
+      <h3 class="group__title">
+        外观
+      </h3>
       <div class="group__list">
         <!-- 暗色模式：点击循环切换 light/system/dark -->
         <button
@@ -83,7 +87,9 @@ const aboutItems = [
 
     <!-- ── 播放分组 ── -->
     <section class="group">
-      <h3 class="group__title">播放</h3>
+      <h3 class="group__title">
+        播放
+      </h3>
       <div class="group__list">
         <!-- 默认音量：MD3Slider + 数值显示 -->
         <div class="row">
@@ -110,7 +116,9 @@ const aboutItems = [
 
     <!-- ── 关于分组 ── -->
     <section class="group">
-      <h3 class="group__title">关于</h3>
+      <h3 class="group__title">
+        关于
+      </h3>
       <div class="group__list">
         <div
           v-for="(item, idx) in aboutItems"

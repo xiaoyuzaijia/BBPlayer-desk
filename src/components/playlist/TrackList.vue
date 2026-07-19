@@ -16,7 +16,7 @@ interface Props {
   isPlaying?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   currentTrackId: '',
   isPlaying: false,
 })
@@ -32,17 +32,29 @@ defineEmits<{
 <template>
   <div class="track-list">
     <!-- 表头行：桌面端独有，对应 TrackListItem 的列布局 -->
-    <div v-if="tracks.length > 0" class="track-list__header">
-      <div class="track-list__index-col">#</div>
-      <div class="track-list__cover-col"></div>
-      <div class="track-list__title-col">标题</div>
-      <div class="track-list__duration-col">时长</div>
+    <div
+      v-if="tracks.length > 0"
+      class="track-list__header"
+    >
+      <div class="track-list__index-col">
+        #
+      </div>
+      <div class="track-list__cover-col" />
+      <div class="track-list__title-col">
+        标题
+      </div>
+      <div class="track-list__duration-col">
+        时长
+      </div>
       <!-- 与 IconButton 等宽（20 + 16 padding） -->
-      <div class="track-list__action-col"></div>
+      <div class="track-list__action-col" />
     </div>
 
     <!-- 曲目列表 -->
-    <div v-if="tracks.length > 0" class="track-list__body">
+    <div
+      v-if="tracks.length > 0"
+      class="track-list__body"
+    >
       <TrackListItem
         v-for="(track, idx) in tracks"
         :key="track.id"
@@ -56,9 +68,19 @@ defineEmits<{
     </div>
 
     <!-- 空态 -->
-    <div v-else class="track-list__empty">
-      <Icon :icon="Icons.musicNote" :width="48" :height="48" class="track-list__empty-icon" />
-      <p class="track-list__empty-text">还没有歌曲</p>
+    <div
+      v-else
+      class="track-list__empty"
+    >
+      <Icon
+        :icon="Icons.musicNote"
+        :width="48"
+        :height="48"
+        class="track-list__empty-icon"
+      />
+      <p class="track-list__empty-text">
+        还没有歌曲
+      </p>
     </div>
   </div>
 </template>

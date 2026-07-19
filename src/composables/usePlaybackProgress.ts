@@ -26,6 +26,7 @@ export function usePlaybackProgress() {
 
   // 监听播放/暂停状态，自动启停进度定时器
   watch(() => playback.isPlaying, (playing) => {
-    playing ? resume() : pause()
+    if (playing) resume()
+    else pause()
   }, { immediate: true })            // 立即执行一次，保证初始状态同步
 }

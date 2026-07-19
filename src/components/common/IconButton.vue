@@ -20,6 +20,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   size: 24,
+  color: undefined,
   selected: false,
   disabled: false,
   type: 'button',
@@ -42,7 +43,11 @@ defineEmits<{
     :style="color ? { color } : undefined"
     @click="$emit('click', $event)"
   >
-    <Icon :icon="icon" :width="size" :height="size" />
+    <Icon
+      :icon="icon"
+      :width="size"
+      :height="size"
+    />
   </button>
 </template>
 

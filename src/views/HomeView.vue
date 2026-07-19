@@ -44,12 +44,20 @@ const recentPlaylists = [
     <!-- 顶部欢迎区：左侧 BBPlayer 标题 + 时段问候；右侧占位头像 -->
     <header class="home__header">
       <div>
-        <h1 class="home__title">BBPlayer</h1>
-        <p class="home__greeting">{{ greeting }}</p>
+        <h1 class="home__title">
+          BBPlayer
+        </h1>
+        <p class="home__greeting">
+          {{ greeting }}
+        </p>
       </div>
       <!-- 占位头像：48×48 圆形 surface-variant，对应 BBPlayer 顶栏右侧 -->
       <div class="home__avatar">
-        <Icon :icon="Icons.person" :width="24" :height="24" />
+        <Icon
+          :icon="Icons.person"
+          :width="24"
+          :height="24"
+        />
       </div>
     </header>
 
@@ -71,7 +79,9 @@ const recentPlaylists = [
 
     <!-- 快捷卡片：响应式 grid（2/3/4 列），每张左侧 48×48 圆形图标容器 -->
     <section>
-      <h2 class="section-title">快捷入口</h2>
+      <h2 class="section-title">
+        快捷入口
+      </h2>
       <!-- 列数与触发宽度由 .quick-grid 的 @media 控制（见 <style>） -->
       <div class="quick-grid">
         <div
@@ -81,11 +91,19 @@ const recentPlaylists = [
         >
           <!-- 48×48 圆形图标容器：primary-container 背景 + on-primary-container 图标 -->
           <div class="quick-card__icon">
-            <Icon :icon="item.icon" :width="24" :height="24" />
+            <Icon
+              :icon="item.icon"
+              :width="24"
+              :height="24"
+            />
           </div>
           <div class="quick-card__text">
-            <div class="quick-card__title">{{ item.title }}</div>
-            <div class="quick-card__desc">{{ item.desc }}</div>
+            <div class="quick-card__title">
+              {{ item.title }}
+            </div>
+            <div class="quick-card__desc">
+              {{ item.desc }}
+            </div>
           </div>
         </div>
       </div>
@@ -93,7 +111,9 @@ const recentPlaylists = [
 
     <!-- 近期歌单：响应式 grid（2/3/4/6 列），CoverPlaceholder 做封面 -->
     <section>
-      <h2 class="section-title">近期歌单</h2>
+      <h2 class="section-title">
+        近期歌单
+      </h2>
       <!-- 列数与触发宽度由 .playlist-grid 的 @media 控制（见 <style>） -->
       <div class="playlist-grid">
         <div
@@ -109,8 +129,12 @@ const recentPlaylists = [
           />
           <!-- 底部信息：标题 + 数量，整体居中 -->
           <div class="playlist-card__meta">
-            <div class="playlist-card__title">{{ pl.title }}</div>
-            <div class="playlist-card__count">{{ pl.count }} 首</div>
+            <div class="playlist-card__title">
+              {{ pl.title }}
+            </div>
+            <div class="playlist-card__count">
+              {{ pl.count }} 首
+            </div>
           </div>
         </div>
       </div>

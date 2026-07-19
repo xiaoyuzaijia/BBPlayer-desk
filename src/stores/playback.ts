@@ -69,7 +69,8 @@ export const usePlaybackStore = defineStore('playback', () => {
   }
 
   function togglePlay() {
-    isPlaying.value ? pause() : resume()
+    if (isPlaying.value) pause()
+    else resume()
   }
 
   function next() {

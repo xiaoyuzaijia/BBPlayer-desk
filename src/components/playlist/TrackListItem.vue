@@ -18,7 +18,7 @@ interface Props {
   isPlaying?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   isCurrent: false,
   isPlaying: false,
 })
@@ -59,15 +59,25 @@ defineEmits<{
 
     <!-- 标题 + 作者 -->
     <div class="track__text">
-      <div class="track__title">{{ track.title }}</div>
-      <div class="track__subtitle">{{ track.artist }}</div>
+      <div class="track__title">
+        {{ track.title }}
+      </div>
+      <div class="track__subtitle">
+        {{ track.artist }}
+      </div>
     </div>
 
     <!-- 时长 -->
-    <div class="track__duration">{{ formatTime(track.duration) }}</div>
+    <div class="track__duration">
+      {{ formatTime(track.duration) }}
+    </div>
 
     <!-- 更多按钮（点击时阻止冒泡，避免触发整行 click） -->
-    <IconButton :icon="Icons.more" :size="20" @click.stop="$emit('more')" />
+    <IconButton
+      :icon="Icons.more"
+      :size="20"
+      @click.stop="$emit('more')"
+    />
   </div>
 </template>
 

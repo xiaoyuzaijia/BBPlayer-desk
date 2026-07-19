@@ -6,8 +6,8 @@
     "allowArbitraryExtensions": true,
 
     /* Linting */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    // noUnusedLocals/Parameters 已交给 ESLint 的 @typescript-eslint/no-unused-vars 管
+    // （带 ^_ 前缀忽略，比 tsc 内置选项更灵活）
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },

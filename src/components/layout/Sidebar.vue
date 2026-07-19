@@ -29,7 +29,10 @@ function toggleCollapsed() {
       class="logo-elevated logo-row"
       :class="collapsed ? 'logo-row--collapsed' : 'logo-row--expanded'"
     >
-      <span v-if="!collapsed" class="logo-text">BBPlayer</span>
+      <span
+        v-if="!collapsed"
+        class="logo-text"
+      >BBPlayer</span>
       <button
         type="button"
         class="toggle-btn"
