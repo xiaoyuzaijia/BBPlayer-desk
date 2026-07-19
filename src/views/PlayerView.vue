@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useResizeObserver } from '@vueuse/core'
 import { Vue3Lottie } from 'vue3-lottie'
-import { Icon } from '@iconify/vue'
 import { usePlaybackStore } from '../stores/playback'
 import { useThemeStore } from '../stores/theme'
 import { Icons } from '../utils/icons'
@@ -13,6 +12,7 @@ import IconButton from '../components/common/IconButton.vue'
 import PlayerProgressBar from '../components/player/PlayerProgressBar.vue'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
 import QueueDrawer from '../components/player/QueueDrawer.vue'
+import LyricView from '../components/lyric/LyricView.vue'
 // Lottie 帧定义：帧 0 = pause（双竖线），帧 7 = play（三角形）
 // 初始化用 goToAndStop 直接定位，切换用 playSegments 播过渡
 import playPauseJson from '../assets/lottie/play-pause.json'
@@ -119,7 +119,10 @@ watch(queueOpen, (open) => {
 </script>
 
 <template>
-  <div v-if="currentTrack" class="player">
+  <div
+    v-if="currentTrack"
+    class="player"
+  >
     <!-- ── 顶栏：左返回 + 中标题 + 右更多 ── -->
     <header class="player__header">
       <IconButton
@@ -131,7 +134,10 @@ watch(queueOpen, (open) => {
         <span class="player__status">正在播放</span>
         <span class="player__track-title">{{ currentTrack.title }}</span>
       </div>
-      <IconButton :icon="Icons.more" :size="24" />
+      <IconButton
+        :icon="Icons.more"
+        :size="24"
+      />
     </header>
 
     <!-- ── 主体：左侧控制台 / 右侧歌词占位 ── -->
@@ -151,14 +157,21 @@ watch(queueOpen, (open) => {
           </div>
           <!-- 曲目信息：与封面同宽对齐 -->
           <div class="track-info">
-            <h1 class="track-info__title">{{ currentTrack.title }}</h1>
-            <p class="track-info__artist">{{ currentTrack.artist }}</p>
+            <h1 class="track-info__title">
+              {{ currentTrack.title }}
+            </h1>
+            <p class="track-info__artist">
+              {{ currentTrack.artist }}
+            </p>
           </div>
         </div>
 
         <!-- 控制台：进度条 + 主控制 + 副控制
             ref + position: relative 作为 inline 队列抽屉的定位参照 -->
-        <div ref="consoleEl" class="player__console">
+        <div
+          ref="consoleEl"
+          class="player__console"
+        >
           <!-- 进度条 + 时间标签（自绘滑块，scrub 预览与 seek 分离） -->
           <PlayerProgressBar
             :current="currentTime"
@@ -197,7 +210,7 @@ watch(queueOpen, (open) => {
                 :loop="false"
                 :speed="2"
                 class="play-btn__lottie"
-                @onAnimationLoaded="initPlayPause"
+                @on-animation-loaded="initPlayPause"
               />
             </button>
 
@@ -230,7 +243,10 @@ watch(queueOpen, (open) => {
               color="var(--md-primary)"
               @click="playback.cyclePlayMode()"
             />
-            <div ref="queueTriggerEl" class="sub-controls__queue-trigger">
+            <div
+              ref="queueTriggerEl"
+              class="sub-controls__queue-trigger"
+            >
               <IconButton
                 :icon="Icons.list"
                 :size="24"
@@ -251,26 +267,21 @@ watch(queueOpen, (open) => {
         </div>
       </section>
 
-      <!-- 右侧：歌词区（暂用占位符，后续阶段实现） -->
+      <!-- 右侧：歌词区（LyricView 内部处理空态占位） -->
       <aside class="player__lyrics">
-        <div class="lyrics-placeholder">
-          <div class="lyrics-placeholder__inner">
-            <Icon
-              :icon="Icons.lyrics"
-              :width="64"
-              :height="64"
-              class="lyrics-placeholder__icon"
-            />
-            <p class="lyrics-placeholder__text">歌词面板（待实现）</p>
-          </div>
-        </div>
+        <LyricView />
       </aside>
     </div>
   </div>
 
   <!-- 空状态：没有正在播放的曲目 -->
-  <div v-else class="player-empty">
-    <p class="player-empty__text">没有正在播放的曲目</p>
+  <div
+    v-else
+    class="player-empty"
+  >
+    <p class="player-empty__text">
+      没有正在播放的曲目
+    </p>
   </div>
 </template>
 
@@ -485,35 +496,13 @@ watch(queueOpen, (open) => {
   display: inline-flex;
 }
 
-/* ── 右侧歌词区：占位 ── */
+/* ── 右侧歌词区：让 LyricView 占满 ── */
 .player__lyrics {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.lyrics-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.lyrics-placeholder__inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-.lyrics-placeholder__icon {
-  color: var(--md-on-surface-variant);
-  opacity: 0.3;
-}
-.lyrics-placeholder__text {
-  font-size: 14px;
-  color: var(--md-on-surface-variant);
-  opacity: 0.6;
+  /* LyricView 内部自管滚动 + 居中，外层只需给高度 */
+  overflow: hidden;
 }
 
 /* ── 空状态 ── */
