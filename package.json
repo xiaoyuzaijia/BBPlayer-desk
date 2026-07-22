@@ -1,16 +1,19 @@
 {
-  "name": "BBPlayer-web",
+  "name": "BBPlayer-desk",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "./out/main/index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "preview": "vite preview",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "vue-tsc -b",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
+    "@electron-toolkit/utils": "^4.0.0",
     "@iconify/vue": "^5.0.1",
     "@vueuse/core": "^14.3.0",
     "lottie-web": "^5.13.0",
@@ -20,6 +23,7 @@
     "vue3-lottie": "^3.3.1"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "@eslint/js": "^10.0.1",
     "@fontsource-variable/roboto-flex": "^5.2.8",
     "@fontsource/noto-sans-sc": "^5.2.9",
@@ -27,6 +31,9 @@
     "@types/node": "^24.13.2",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/tsconfig": "^0.9.1",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
     "eslint": "^10.7.0",
     "eslint-plugin-vue": "^10.9.2",
     "globals": "^17.7.0",

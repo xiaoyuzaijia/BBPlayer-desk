@@ -45,7 +45,7 @@ const recentPlaylists = [
     <header class="home__header">
       <div>
         <h1 class="home__title">
-          BBPlayer
+          BBPlayer-desk
         </h1>
         <p class="home__greeting">
           {{ greeting }}

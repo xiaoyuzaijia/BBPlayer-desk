@@ -1,8 +1,10 @@
-# AGENTS.md — bbplayer-web
+# AGENTS.md — BBPlayer-desk
 
 ## 项目说明
 
-学习项目：Vue 3 + TypeScript 桌面 Web 应用，参考 BBPlayer（B站音乐播放器），通过 CSS 自定义属性使用 MD3（Material Design 3）设计语言。
+学习项目：Vue 3 + TypeScript 桌面 Web 应用（即将迁移至 Electron），参考 BBPlayer（B站音乐播放器），通过 CSS 自定义属性使用 MD3（Material Design 3）设计语言。
+
+> **迁移计划**：详见 [docs/plan/后端计划.md](docs/plan/后端计划.md)。目标目录结构采用 electron-vite 默认布局（`src/main` + `src/preload` + `src/renderer` + `src/shared`）。当前仓库仍为迁移前的 web 形态，下方"项目结构""状态管理"等章节描述的是当前状态，迁移启动后需同步更新。
 
 ## 命令
 
