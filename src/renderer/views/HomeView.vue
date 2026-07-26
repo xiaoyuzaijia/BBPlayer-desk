@@ -1,8 +1,24 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { Icon } from '@iconify/vue'
+import { storeToRefs } from 'pinia'
 import { Icons } from '../utils/icons'
+import { resolveBilibiliImageUrl } from '../utils/imageUrl'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
+import { useAuthStore } from '../stores/auth'
+import { useBilibiliUserInfo } from '../composables/useBilibiliUserInfo'
+
+// auth store + 用户信息 Query（已登录时由 TanStack Query 拉取，24h staleTime）
+const auth = useAuthStore()
+const { isLoggedIn } = storeToRefs(auth)
+const { data: userInfo } = useBilibiliUserInfo()
+
+// 头像：登录后用 B 站 face URL（走本地代理绕过防盗链），未登录用 person 图标
+const avatarFace = ref('')
+watchEffect(async () => {
+  const raw = userInfo.value?.face ?? auth.userInfo?.face ?? ''
+  avatarFace.value = (await resolveBilibiliImageUrl(raw, 96)) ?? ''
+})
 
 // 顶部搜索框 v-model（步骤 9：把静态 input 升级为受控输入）
 const searchQuery = ref('')
@@ -51,14 +67,25 @@ const recentPlaylists = [
           {{ greeting }}
         </p>
       </div>
-      <!-- 占位头像：48×48 圆形 surface-variant，对应 BBPlayer 顶栏右侧 -->
-      <div class="home__avatar">
+      <!-- 头像入口：点击跳转账号管理页；登录态显示真实头像，未登录显示 person 图标 -->
+      <router-link
+        :to="{ name: 'account' }"
+        class="home__avatar"
+        aria-label="账号管理"
+      >
+        <img
+          v-if="isLoggedIn && avatarFace"
+          :src="avatarFace"
+          alt=""
+          class="home__avatar-img"
+        >
         <Icon
+          v-else
           :icon="Icons.person"
           :width="24"
           :height="24"
         />
-      </div>
+      </router-link>
     </header>
 
     <!-- 搜索栏：左侧放大镜 + v-model 受控，圆角全圆，背景 surface-variant -->
@@ -177,6 +204,21 @@ const recentPlaylists = [
   display: flex;
   align-items: center;
   justify-content: center;
+  /* router-link 渲染为 <a>，重置默认链接样式 */
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease;
+}
+.home__avatar:hover {
+  background: var(--md-surface-container-high);
+}
+/* 登录态真实头像：圆形覆盖整个 48×48 容器 */
+.home__avatar-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  pointer-events: none;
 }
 
 /* ── 搜索栏 ── */

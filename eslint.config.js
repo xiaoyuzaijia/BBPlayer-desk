@@ -11,7 +11,7 @@ import globals from 'globals'
 export default tseslint.config(
   // ── 全局忽略 ──
   {
-    ignores: ['dist/**', 'node_modules/**', '.trae/**', 'docs/**'],
+    ignores: ['dist/**', 'node_modules/**', '.trae/**', 'docs/**', 'out/**'],
   },
 
   // ── JS 基础推荐规则 ──

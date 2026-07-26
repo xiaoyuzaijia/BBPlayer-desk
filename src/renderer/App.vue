@@ -3,9 +3,12 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Sidebar from './components/layout/Sidebar.vue'
 import NowPlayingBar from './components/layout/NowPlayingBar.vue'
+import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 import { usePlaybackProgress } from './composables/usePlaybackProgress'
 
+// auth store 在 App 顶层初始化一次，订阅主进程登录态推送
+useAuthStore().init()
 useThemeStore()
 usePlaybackProgress()
 

@@ -7,6 +7,10 @@ import { usePlaybackStore } from '../stores/playback'
 import { Icons } from '../utils/icons'
 import MD3Slider from '../components/common/MD3Slider.vue'
 
+// 账号分组：单行入口跳转到 account 路由
+// description 占位文案，后续接 auth store 后改为动态「昵称 (uidxxx)」或登录提示
+const accountDesc = '扫码、手机号或 Cookie 登录'
+
 const theme = useThemeStore()
 // 音量属于播放控制状态，从 playback store 取
 const playback = usePlaybackStore()
@@ -50,6 +54,39 @@ const aboutItems = [
     <h2 class="settings__title">
       设置
     </h2>
+
+    <!-- ── 账号分组 ── -->
+    <section class="group">
+      <h3 class="group__title">
+        账号
+      </h3>
+      <div class="group__list">
+        <!-- Bilibili 账号入口：RouterLink 渲染为 row 样式 -->
+        <router-link
+          :to="{ name: 'account' }"
+          class="row"
+        >
+          <div class="row__left">
+            <Icon
+              :icon="Icons.person"
+              :width="20"
+              :height="20"
+              class="row__icon"
+            />
+            <span class="row__label">Bilibili 账号</span>
+          </div>
+          <div class="row__right">
+            <span class="row__value">{{ accountDesc }}</span>
+            <Icon
+              :icon="Icons.chevronRight"
+              :width="18"
+              :height="18"
+              class="row__chevron"
+            />
+          </div>
+        </router-link>
+      </div>
+    </section>
 
     <!-- ── 外观分组 ── -->
     <section class="group">
@@ -185,7 +222,7 @@ const aboutItems = [
   overflow: hidden;
 }
 
-/* ── 列表行（按钮/容器通用） ── */
+/* ── 列表行（按钮/容器/router-link 通用） ── */
 .row {
   display: flex;
   align-items: center;
@@ -199,6 +236,9 @@ const aboutItems = [
   transition: background-color 0.15s ease;
   box-sizing: border-box;
   text-align: left;
+  /* router-link 渲染为 <a>，需要重置默认链接样式 */
+  text-decoration: none;
+  color: inherit;
 }
 .row:hover {
   background: var(--md-surface-container-high);

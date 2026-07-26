@@ -25,6 +25,9 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: { index: resolve(__dirname, 'src/preload/index.ts') },
+        // electron 必须外部化：preload 中 import from "electron" 应使用 Electron 内置模块，
+        // 而非 node_modules/electron/index.js（含 getElectronPath 副作用）
+        external: ['electron'],
       },
     },
   },

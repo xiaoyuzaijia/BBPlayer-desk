@@ -15,8 +15,8 @@ dist-ssr
 # Electron / electron-vite
 # out/ —— electron-vite 三端构建产物（main/preload/renderer）
 # release/ —— electron-builder 打包产物（未来阶段）
-out/
-release/
+out
+release
 *.exe.user
 
 # Dev
