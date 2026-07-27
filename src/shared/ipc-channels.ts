@@ -13,3 +13,18 @@ export const AUTH_CHANNELS = {
 export const IMAGE_CHANNELS = {
   getProxyPort: 'image:getProxyPort',
 } as const
+
+export const PLAYLIST_CHANNELS = {
+  getAll: 'playlist:getAll',
+  getById: 'playlist:getById',
+  getTracks: 'playlist:getTracks',
+  getTracksPaginated: 'playlist:getTracksPaginated',
+  createLocal: 'playlist:createLocal',
+  updateMetadata: 'playlist:updateMetadata',
+  delete: 'playlist:delete',
+  addTracks: 'playlist:addTracks',
+  removeTracks: 'playlist:removeTracks',
+  reorderTrack: 'playlist:reorderTrack',
+  syncRemote: 'playlist:syncRemote',
+  syncProgress: 'playlist:syncProgress', // 主→渲染 推送
+} as const

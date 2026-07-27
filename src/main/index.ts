@@ -1,8 +1,9 @@
 // 主进程入口
-// 启动流程：appState.load() → startImageProxy() → createWindow() → registerAllIpc()
+// 启动流程：appState.load() → initDb() → startImageProxy() → createWindow() → registerAllIpc()
 import { app, BrowserWindow } from 'electron'
 import { createWindow } from './window'
 import { appState } from './lib/config/store'
+import { closeDb, initDb } from './lib/db'
 import { registerAllIpc } from './ipc'
 import { bilibiliAuthFacade } from './lib/facades/bilibiliAuth'
 import { startImageProxy, stopImageProxy } from './lib/facades/imageProxy'
@@ -16,6 +17,9 @@ if (!gotTheLock) {
 app.whenReady().then(async () => {
   // 读 state.json（cookie / userInfo / sendPlayHistory）
   appState.load()
+
+  // 初始化 SQLite + 应用 migrations（必须在任何 service 调用前完成）
+  initDb()
 
   // 启动本地图片代理 server（绕过 B 站 CDN 防盗链）
   // 端口由系统分配，渲染进程通过 IPC 查询
@@ -46,7 +50,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-// 应用退出时停止图片代理 server
+// 应用退出时停止图片代理 server + 关闭数据库连接
 app.on('before-quit', () => {
   stopImageProxy()
+  closeDb()
 })

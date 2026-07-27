@@ -16,7 +16,9 @@ export default defineConfig({
         input: { index: resolve(__dirname, 'src/main/index.ts') },
         // electron 必须外部化：否则 bundler 会内联 electron/index.js（含 getElectronPath 副作用），
         // __dirname 变成 out/main/ 导致 path.txt 找不到，触发重复下载
-        external: ['electron'],
+        // better-sqlite3 是原生 C++ 模块，必须外部化：运行时从 node_modules 加载，
+        // 否则打包进 bundle 会因 ABI 不匹配崩溃（已按 Electron 版本 rebuild）
+        external: ['electron', 'better-sqlite3'],
       },
     },
   },

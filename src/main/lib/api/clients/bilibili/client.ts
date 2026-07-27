@@ -242,7 +242,7 @@ class ApiClient {
     skipCookie,
   }: {
     endpoint: string
-    data?: BodyInit
+    data?: RequestInit['body']
     headers?: Record<string, string>
     fullUrl?: string
     skipCookie?: boolean
@@ -273,16 +273,22 @@ class ApiClient {
     payload?: Record<string, string>
   }): ResultAsync<T, BilibiliApiError> {
     const csrfResult = getCsrfToken(appState.bilibiliCookie)
-    return csrfResult.asyncAndThen((csrfToken) => {
-      const dataWithCsrf = {
-        ...payload,
-        csrf: csrfToken,
-      }
-
-      const body = new URLSearchParams(dataWithCsrf).toString()
-
-      return this.post<T>({ endpoint, data: body })
-    })
+    if (csrfResult.isErr()) {
+      return errAsync(
+        new BilibiliApiError({
+          message: csrfResult.error.message,
+          type: 'CsrfError',
+          cause: csrfResult.error,
+        }),
+      )
+    }
+    const csrfToken = csrfResult.value
+    const dataWithCsrf = {
+      ...payload,
+      csrf: csrfToken,
+    }
+    const body = new URLSearchParams(dataWithCsrf).toString()
+    return this.post<T>({ endpoint, data: body })
   }
 }
 export const bilibiliApiClient = new ApiClient()
