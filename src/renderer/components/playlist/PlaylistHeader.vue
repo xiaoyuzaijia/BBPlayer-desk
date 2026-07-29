@@ -5,32 +5,42 @@ import { Icons } from '../../utils/icons'
 import CoverPlaceholder from '../common/CoverPlaceholder.vue'
 import IconButton from '../common/IconButton.vue'
 import type { Playlist } from '../../types/playlist'
+import type { Track } from '../../types/track'
 import { totalDuration } from '../../stores/playlist'
 
-// 歌单详情页头部：参考 BBPlayer PlaylistHeader.tsx 简化版
+// 歌单详情页头部：参考 BBPlayer LocalPlaylistHeader.tsx
 // 布局：[120 封面] [标题 / N首•总时长 / 描述]
-//      [播放全部] [同步] [+ 添加歌曲] [⋯ 更多]
+//      [▶ 播放全部] [⟳ 同步(仅同步型)] [⧉ 复制] [↓ 下载] [→ 跳转本地] [⋯ 更多]
+// 复制 / 下载：icon-only IconButton，暂未实现功能（disabled 预留位）
 interface Props {
   playlist: Playlist
+  // 曲目列表（用于计算总时长，由 PlaylistView 通过 usePlaylistTracks 拿到后传入）
+  tracks: Track[]
+  // 是否正在同步远端歌单（控制同步按钮 disabled）
+  syncing?: boolean
+  // 是否显示"跳转本地歌单"箭头按钮（仅远端页面 + 已同步时显示）
+  showArrow?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  syncing: false,
+  showArrow: false,
+})
 
 defineEmits<{
   // 播放全部
   playAll: []
-  // 同步（仅 synced/favorite/toview 显示）
+  // 同步（仅非 local 类型显示）
   sync: []
-  // 添加歌曲（仅 local 显示）
-  addTrack: []
+  // 跳转到对应本地歌单（仅远端页面 + 已同步显示）
+  arrow: []
   // 更多操作
-  more: []
-}>()
+  more: []}>()
 
-// 曲目数
-const trackCount = computed(() => props.playlist.tracks.length)
+// 曲目数：优先用 playlist.itemCount（IPC 返回的元数据），fallback 到 tracks.length
+const trackCount = computed(() => props.playlist.itemCount || props.tracks.length)
 // 总时长（秒）：用独立工具函数（非 store 方法）
-const totalDurationSec = computed(() => totalDuration(props.playlist.tracks))
+const totalDurationSec = computed(() => totalDuration(props.tracks))
 // 总时长格式化（hh:mm:ss 或 mm:ss）
 const totalDurationText = computed(() => {
   const sec = totalDurationSec.value
@@ -44,17 +54,17 @@ const totalDurationText = computed(() => {
 })
 
 // 按歌单类型决定按钮显隐
-// - local:   显示 +添加歌曲，不显示 同步
-// - synced:  显示 同步，不显示 +添加歌曲
-// - favorite: 显示 同步，不显示 +添加歌曲
-// - toview:  显示 同步，不显示 +添加歌曲
+// - local:        不显示 同步
+// - favorite / collection / multi_page: 显示 同步（重新同步）
 const showSync = computed(() => props.playlist.type !== 'local')
-const showAddTrack = computed(() => props.playlist.type === 'local')
 
-// 同步按钮的文案：synced 显示"重新同步"，其他显示"同步"
-const syncLabel = computed(() =>
-  props.playlist.type === 'synced' ? '重新同步' : '同步到本地',
-)
+// 类型徽章文案映射
+const typeLabels: Record<Playlist['type'], string> = {
+  local: '本地',
+  favorite: 'B站收藏',
+  collection: '合集',
+  multi_page: '多P视频',
+}
 </script>
 
 <template>
@@ -65,7 +75,7 @@ const syncLabel = computed(() =>
       <CoverPlaceholder
         :title="playlist.title"
         :size="120"
-        :cover-url="playlist.coverUrl"
+        :cover-url="playlist.coverUrl ?? undefined"
         class="header__cover"
       />
 
@@ -76,12 +86,7 @@ const syncLabel = computed(() =>
         </h1>
         <div class="header__meta">
           <!-- 类型徽章（小标签） -->
-          <span class="header__type-badge">{{ {
-            local: '本地',
-            synced: '已同步',
-            favorite: 'B站收藏',
-            toview: '稍后再看',
-          }[playlist.type] }}</span>
+          <span class="header__type-badge">{{ typeLabels[playlist.type] }}</span>
           <span>{{ trackCount }} 首</span>
           <span class="header__dot">·</span>
           <span>总时长 {{ totalDurationText }}</span>
@@ -97,7 +102,7 @@ const syncLabel = computed(() =>
 
     <!-- 下半部分：操作按钮行 -->
     <div class="header__actions">
-      <!-- 播放全部：FilledButton（primary 背景） -->
+      <!-- 播放全部：FilledButton（primary 背景，text + icon） -->
       <button
         class="btn btn--filled"
         @click="$emit('playAll')"
@@ -110,33 +115,36 @@ const syncLabel = computed(() =>
         <span>播放全部</span>
       </button>
 
-      <!-- 同步：OutlinedButton（仅 synced/favorite/toview 显示） -->
-      <button
+      <!-- 同步：IconButton（仅非 local 类型显示，icon-only，同步中 disabled） -->
+      <IconButton
         v-if="showSync"
-        class="btn btn--outlined"
+        :icon="Icons.sync"
+        :size="20"
+        :disabled="syncing"
         @click="$emit('sync')"
-      >
-        <Icon
-          :icon="Icons.cloud"
-          :width="20"
-          :height="20"
-        />
-        <span>{{ syncLabel }}</span>
-      </button>
+      />
 
-      <!-- 添加歌曲：OutlinedButton（仅 local 显示） -->
-      <button
-        v-if="showAddTrack"
-        class="btn btn--outlined"
-        @click="$emit('addTrack')"
-      >
-        <Icon
-          :icon="Icons.add"
-          :width="20"
-          :height="20"
-        />
-        <span>添加歌曲</span>
-      </button>
+      <!-- 复制：IconButton（icon-only，功能暂未实现，disabled 预留位） -->
+      <IconButton
+        :icon="Icons.contentCopy"
+        :size="20"
+        disabled
+      />
+
+      <!-- 下载：IconButton（icon-only，功能暂未实现，disabled 预留位） -->
+      <IconButton
+        :icon="Icons.download"
+        :size="20"
+        disabled
+      />
+
+      <!-- 跳转本地歌单：IconButton（仅远端页面 + 已同步时显示） -->
+      <IconButton
+        v-if="showArrow"
+        :icon="Icons.chevronRight"
+        :size="20"
+        @click="$emit('arrow')"
+      />
 
       <!-- 更多：IconButton -->
       <IconButton
@@ -244,14 +252,12 @@ const syncLabel = computed(() =>
   background: color-mix(in srgb, var(--md-on-primary) 8%, var(--md-primary));
 }
 
-/* OutlinedButton：透明背景 + outline 边框 */
-.btn--outlined {
-  background: transparent;
-  color: var(--md-primary);
-  border: 1px solid var(--md-outline);
+/* disabled：降低不透明度（MD3 规范） */
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
 }
-.btn--outlined:hover {
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+.btn--filled:disabled:hover {
+  background: var(--md-primary);
 }
 </style>

@@ -28,3 +28,19 @@ export const PLAYLIST_CHANNELS = {
   syncRemote: 'playlist:syncRemote',
   syncProgress: 'playlist:syncProgress', // 主→渲染 推送
 } as const
+
+export const PLAYBACK_CHANNELS = {
+  getAudioUrl: 'playback:getAudioUrl',
+  refreshAudioUrl: 'playback:refreshAudioUrl',
+} as const
+
+export const HISTORY_CHANNELS = {
+  record: 'history:record',
+  getRecent: 'history:getRecent',
+} as const
+
+export const BILIBILI_CHANNELS = {
+  getFavoritePlaylists: 'bilibili:getFavoritePlaylists',
+  getFavoriteListContents: 'bilibili:getFavoriteListContents',
+  addTrackByBvid: 'bilibili:addTrackByBvid', // 阶段 D 用，远端点击播放
+} as const

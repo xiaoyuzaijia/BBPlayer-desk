@@ -70,14 +70,14 @@ const playModeIcon = computed(() => {
           :title="currentTrack.title"
           :size="48"
           :border-radius="24"
-          :cover-url="currentTrack.coverUrl"
+          :cover-url="currentTrack.coverUrl ?? undefined"
           class="npb__cover"
         />
 
         <!-- 中间文字：titleSmall + bodySmall，truncate 单行 -->
         <div class="npb__text">
           <span class="npb__title">{{ currentTrack.title }}</span>
-          <span class="npb__artist">{{ currentTrack.artist }}</span>
+          <span class="npb__artist">{{ currentTrack.artist?.name ?? '未知' }}</span>
         </div>
 
         <!-- 右侧控制：repeat + skipPrev + play + skipNext，按钮 @click.stop 防止触发条跳转 -->

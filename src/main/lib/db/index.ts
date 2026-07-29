@@ -8,10 +8,17 @@ import { app } from 'electron'
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 
 import * as schema from './schema'
+
+// ESM 中 __dirname 未定义（package.json "type": "module"），
+// 用 fileURLToPath(import.meta.url) + dirname() 推导等价路径。
+// electron-vite 把 main bundle 输出到 out/main/index.js，
+// 所以 __dirname 即 out/main/。
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 let dbInstance: BetterSQLite3Database<typeof schema> | null = null
 let rawDb: Database.Database | null = null
@@ -43,13 +50,30 @@ function getDbPath(): string {
 /**
  * 获取 migrations 目录路径
  * - 开发：源码目录 src/main/lib/db/migrations
- * - 生产：打包到 out/main/migrations（electron-vite 默认打包资源）
+ * - 生产：打包到 out/main/migrations（需 electron-vite 配置 publicDir）
+ *
+ * 注意：package.json 的 "type": "module" 使主进程输出为 ESM，
+ * ESM 中 __dirname 未定义，需用 import.meta.url 推导（见文件顶部）。
+ * electron-vite 把所有源码 bundle 成单个 out/main/index.js，
+ * 所以 __dirname 指向 out/main/，需上溯找源码 migrations。
  */
 function getMigrationsFolder(): string {
-  // __dirname 在 external 后保持源码相对路径
-  // 开发时为 out/main/lib/db/index.js → migrations 在源码目录
-  // 生产环境若打包到 out/main，migrations 也应跟随
-  return join(__dirname, 'migrations')
+  if (app.isPackaged) {
+    // 生产：migrations 应被打包到 out/main/migrations
+    return join(__dirname, 'migrations')
+  }
+  // 开发：bundle 输出在 out/main/index.js，源码 migrations 在
+  // src/main/lib/db/migrations，需从 out/main 上溯两级到项目根
+  return join(
+    __dirname,
+    '..',
+    '..',
+    'src',
+    'main',
+    'lib',
+    'db',
+    'migrations',
+  )
 }
 
 /**

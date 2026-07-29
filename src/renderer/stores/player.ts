@@ -12,8 +12,8 @@ export const usePlayerStore = defineStore('player', () => {
   // 当前在队列中的索引（由 playback action 同步写入）
   const queueIndex = ref(0)
 
-  // 派生：当前曲目 id（便于列表高亮 selector）
-  const currentTrackId = computed(() => currentTrack.value?.id ?? '')
+  // 派生：当前曲目 id（便于列表高亮 selector），null 时返回 null
+  const currentTrackId = computed(() => currentTrack.value?.id ?? null)
 
   return {
     currentTrack,

@@ -6,7 +6,7 @@ import { Icons } from '../utils/icons'
 import { resolveBilibiliImageUrl } from '../utils/imageUrl'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
 import { useAuthStore } from '../stores/auth'
-import { useBilibiliUserInfo } from '../composables/useBilibiliUserInfo'
+import { useBilibiliUserInfo } from '../composables/queries/bilibili/user'
 
 // auth store + 用户信息 Query（已登录时由 TanStack Query 拉取，24h staleTime）
 const auth = useAuthStore()

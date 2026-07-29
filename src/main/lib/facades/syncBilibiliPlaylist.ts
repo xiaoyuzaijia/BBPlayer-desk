@@ -493,7 +493,8 @@ export class SyncBilibiliPlaylistFacade {
 
       const bilibiliFavoriteListAllContents =
         bilibiliResult.value[0] as BilibiliFavoriteListAllContents
-      const bilibiliFavoriteListMetadata = bilibiliResult.value[1] as BilibiliFavoriteListContents
+      const bilibiliFavoriteListMetadata =
+        bilibiliResult.value[1] as unknown as BilibiliFavoriteListContents
 
       const favoriteListInfo = bilibiliFavoriteListMetadata.info
       if (!favoriteListInfo) {
@@ -625,7 +626,7 @@ export class SyncBilibiliPlaylistFacade {
         if (pageResult.isErr()) {
           return err(pageResult.error)
         }
-        const page = pageResult.value as BilibiliFavoriteListContents
+        const page = pageResult.value as unknown as BilibiliFavoriteListContents
         if (!page.medias) {
           return err(
             createFacadeError(

@@ -24,6 +24,23 @@ export type PlaylistErrorCode =
   | 'UNKNOWN'
 
 /**
+ * playback 模块错误码
+ */
+export type PlaybackErrorCode =
+  | 'DATABASE'
+  | 'SERVICE'
+  | 'FACADE'
+  | 'BILIBILI_REJECTED'
+  | 'NOT_FOUND'
+  | 'VALIDATION'
+  | 'UNKNOWN'
+
+/**
+ * history 模块错误码
+ */
+export type HistoryErrorCode = 'DATABASE' | 'SERVICE' | 'UNKNOWN'
+
+/**
  * Result 包装类型：主进程 IPC handler 返回值统一用此类型
  * 替代 throw，错误信息结构化
  */
@@ -200,4 +217,67 @@ export interface FavoriteSyncProgress {
     | 'error'
   /** 标识本次同步任务（type + remoteSyncId），渲染进程用来匹配正在同步的歌单 */
   taskId: string
+}
+
+/**
+ * 播放记录 payload（history:record）
+ * <audio> ended 事件触发时由 useAudioEngine 调用，写 play_history 表
+ * - trackId: 曲目 id
+ * - startTime: 播放开始时间戳 (ms epoch)
+ * - durationPlayed: 实际播放秒数（可能小于 track.duration，用户可能跳过）
+ * - completed: 是否播放完成（默认 currentTime >= duration - 5s 视为完成）
+ */
+export interface PlayRecordPayload {
+  trackId: number
+  startTime: number
+  durationPlayed: number
+  completed: boolean
+}
+
+// ##################################
+// B 站收藏夹浏览（未同步也可浏览）
+// 用于 bilibili:* IPC 通道，与主进程内部类型独立
+// ##################################
+
+/**
+ * B 站收藏夹列表项（getFavoritePlaylists 返回）
+ */
+export interface BilibiliFavoriteFolder {
+  id: number // 收藏夹 fid
+  title: string
+  cover: string | null
+  upper: { mid: number; name: string; face: string | null }
+  media_count: number // 曲目数
+  fav_time: number // 创建时间（ms epoch）
+  intro: string | null
+}
+
+/**
+ * B 站收藏夹内容单项（getFavoriteListContents.medias[i]）
+ */
+export interface BilibiliFavoriteMedia {
+  bvid: string
+  title: string
+  cover: string | null
+  upper: { mid: number; name: string; face: string | null }
+  duration: number // 秒
+  fav_time: number
+  attr: number // 0 = 正常，其他 = 失效
+  cid: number | null
+}
+
+/**
+ * B 站收藏夹内容响应（getFavoriteListContents 返回）
+ */
+export interface BilibiliFavoriteListContents {
+  info: {
+    id: number
+    title: string
+    cover: string | null
+    upper: { mid: number; name: string; face: string | null }
+    intro: string | null
+    media_count: number // 收藏夹内媒体总数（B 站 API 字段）
+  } | null
+  medias: BilibiliFavoriteMedia[] | null
+  has_more: boolean
 }

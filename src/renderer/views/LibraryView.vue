@@ -1,58 +1,109 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+// 音乐库视图：4 tab 结构（对齐 BBPlayer）
+//
+// 阶段 C 实现：
+// - local tab：DB 所有歌单（含同步型 favorite/collection/multi_page）
+// - favorite tab：B 站 API 收藏夹列表（未同步的也显示）
+// - collection / multiPage tab：阶段 D 实现，当前占位空状态
+//
+// 数据源约定（AGENTS.md）：
+// - local tab 走 usePlaylists()（TanStack Query，DB 数据）
+// - favorite tab 走 useFavoritePlaylists()（TanStack Query，B 站 API）
+// - 歌单列表不放 Pinia store
+import { computed, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { Icons } from '../utils/icons'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
-import { usePlaylistStore } from '../stores/playlist'
+import { usePlaylists } from '../composables/queries/db/playlist'
+import { useFavoritePlaylists } from '../composables/queries/bilibili/favorite'
+import { useAuthStore } from '../stores/auth'
+import { resolveBilibiliImageUrl } from '../utils/imageUrl'
 import type { Playlist } from '../types/playlist'
+import type { BilibiliFavoriteFolder } from '../types/bilibili'
 
 const router = useRouter()
-const playlistStore = usePlaylistStore()
+const auth = useAuthStore()
 
-// 三个 tab：本地歌单 / B站收藏 / 稍后再看
-// 本地 tab 同时展示 local + synced 两种类型
+// ── Tab 定义 ──
+// local + favorite 阶段 C 实现，collection + multiPage 阶段 D
 const tabs = [
-  { key: 'local', label: '本地歌单' },
-  { key: 'bilibili', label: 'B站收藏' },
-  { key: 'watchlater', label: '稍后再看' },
+  { key: 'local', label: '播放列表' },
+  { key: 'favorite', label: '收藏夹' },
+  { key: 'collection', label: '合集' },
+  { key: 'multiPage', label: '分P' },
 ] as const
 
-const activeTab = ref<(typeof tabs)[number]['key']>('local')
+type TabKey = (typeof tabs)[number]['key']
+const activeTab = ref<TabKey>('local')
 
-// 按 tab 取歌单列表
-const list = computed<Playlist[]>(() => {
-  if (activeTab.value === 'local') {
-    // 本地 tab 同时显示 local + synced
-    return playlistStore.playlists.filter(
-      (p) => p.type === 'local' || p.type === 'synced',
-    )
+// ── local tab 数据源：DB 所有歌单（含同步型） ──
+const {
+  data: playlists,
+  isLoading: isPlaylistsLoading,
+  isError: isPlaylistsError,
+  error: playlistsError,
+} = usePlaylists()
+
+// ── favorite tab 数据源：B 站 API 收藏夹列表 ──
+const {
+  data: favoriteFolders,
+  isLoading: isFavoritesLoading,
+  isError: isFavoritesError,
+  error: favoritesError,
+} = useFavoritePlaylists()
+
+// ── 收藏夹封面代理 URL 缓存（folder.id → resolved URL） ──
+// B 站 CDN 防盗链，需走本地图片代理（resolveBilibiliImageUrl）
+// watchEffect 自动追踪 favoriteFolders 变化，onCleanup 防止竞态覆盖
+const favoriteCovers = ref<Map<number, string | null>>(new Map())
+watchEffect(async (onCleanup) => {
+  const folders = favoriteFolders.value
+  if (!folders || folders.length === 0) {
+    favoriteCovers.value = new Map()
+    return
   }
-  if (activeTab.value === 'bilibili') {
-    return playlistStore.getPlaylistsByType('favorite')
+  let cancelled = false
+  onCleanup(() => {
+    cancelled = true
+  })
+  const resolved = new Map<number, string | null>()
+  await Promise.all(
+    folders.map(async (f) => {
+      const url = await resolveBilibiliImageUrl(f.cover, 96)
+      resolved.set(f.id, url ?? null)
+    }),
+  )
+  if (!cancelled) {
+    favoriteCovers.value = resolved
   }
-  // 稍后再看
-  return playlistStore.getPlaylistsByType('toview')
 })
 
+// local tab 列表（所有歌单，含同步型，不再按 type 过滤）
+const localList = computed<Playlist[]>(() => playlists.value ?? [])
+
+// favorite tab 列表（已过滤 [mp] 分 P 收藏夹，hook 内处理）
+const favoriteList = computed<BilibiliFavoriteFolder[]>(
+  () => favoriteFolders.value ?? [],
+)
+
 // 根据 playlist.type 与 isPinned 决定状态图标
-function statusIcon(playlist: Playlist): string | null {
+function localStatusIcon(playlist: Playlist): string | null {
   if (playlist.isPinned) return Icons.pin
-  if (playlist.type === 'synced') return Icons.cloud
-  if (playlist.type === 'favorite' || playlist.type === 'toview') return Icons.cloud
+  // 远端同步型（有 lastSyncedAt）显示 cloud
+  if (playlist.type !== 'local' && playlist.lastSyncedAt) return Icons.cloud
   return null
 }
 
-// 列表项点击：按 type 跳转对应路由
-function goToPlaylist(playlist: Playlist) {
-  if (playlist.type === 'toview') {
-    router.push({ name: 'playlist-toview' })
-  } else if (playlist.type === 'favorite') {
-    router.push({ name: 'playlist-favorite', params: { id: playlist.id } })
-  } else {
-    // local + synced 都走 playlist-local 路由
-    router.push({ name: 'playlist-local', params: { id: playlist.id } })
-  }
+// 列表项点击：按 activeTab 跳转不同路由
+// - local tab：playlist-local/:id（id 是本地 playlistId）
+// - favorite tab：playlist-favorite/:id（id 是 B 站 favoriteId）
+function goToLocalPlaylist(item: Playlist) {
+  router.push({ name: 'playlist-local', params: { id: String(item.id) } })
+}
+
+function goToFavoritePlaylist(folder: BilibiliFavoriteFolder) {
+  router.push({ name: 'playlist-favorite', params: { id: String(folder.id) } })
 }
 </script>
 
@@ -75,66 +126,192 @@ function goToPlaylist(playlist: Playlist) {
       </button>
     </nav>
 
-    <!-- 列表：封面 + 标题/副标题 + 末尾箭头，Divider 分隔 -->
-    <div
-      v-if="list.length > 0"
-      class="list"
-    >
+    <!-- ── local tab：DB 所有歌单（含同步型） ── -->
+    <template v-if="activeTab === 'local'">
+      <!-- 加载中 -->
       <div
-        v-for="(item, idx) in list"
-        :key="item.id"
-        class="list-item"
-        :class="{ 'list-item--last': idx === list.length - 1 }"
-        @click="goToPlaylist(item)"
+        v-if="isPlaylistsLoading"
+        class="empty"
       >
-        <!-- 48×48 CoverPlaceholder（coverUrl 留空走占位符） -->
-        <CoverPlaceholder
-          :title="item.title"
-          :size="48"
-          :cover-url="item.coverUrl"
-          class="list-item__cover"
-        />
-        <!-- 标题 + 副标题（含状态图标） -->
-        <div class="list-item__text">
-          <div class="list-item__title">
-            {{ item.title }}
-          </div>
-          <div class="list-item__subtitle">
-            <Icon
-              v-if="statusIcon(item)"
-              :icon="statusIcon(item)!"
-              :width="13"
-              :height="13"
-              class="list-item__status-icon"
-            />
-            <span>{{ item.tracks.length }} 首</span>
-          </div>
-        </div>
-        <!-- 末尾右箭头 -->
-        <Icon
-          :icon="Icons.chevronRight"
-          :width="24"
-          :height="24"
-          class="list-item__chevron"
-        />
+        <p class="empty__text">
+          加载中…
+        </p>
       </div>
-    </div>
 
-    <!-- 空状态 -->
-    <div
-      v-else
-      class="empty"
-    >
-      <Icon
-        :icon="Icons.library"
-        :width="48"
-        :height="48"
-        class="empty__icon"
-      />
-      <p class="empty__text">
-        暂无内容
-      </p>
-    </div>
+      <!-- 加载错误 -->
+      <div
+        v-else-if="isPlaylistsError"
+        class="empty"
+      >
+        <p class="empty__text">
+          加载失败：{{ playlistsError?.message ?? '未知错误' }}
+        </p>
+      </div>
+
+      <!-- 歌单列表 -->
+      <div
+        v-else-if="localList.length > 0"
+        class="list"
+      >
+        <div
+          v-for="(item, idx) in localList"
+          :key="item.id"
+          class="list-item"
+          :class="{ 'list-item--last': idx === localList.length - 1 }"
+          @click="goToLocalPlaylist(item)"
+        >
+          <CoverPlaceholder
+            :title="item.title"
+            :size="48"
+            :cover-url="item.coverUrl ?? undefined"
+            class="list-item__cover"
+          />
+          <div class="list-item__text">
+            <div class="list-item__title">
+              {{ item.title }}
+            </div>
+            <div class="list-item__subtitle">
+              <Icon
+                v-if="localStatusIcon(item)"
+                :icon="localStatusIcon(item)!"
+                :width="13"
+                :height="13"
+                class="list-item__status-icon"
+              />
+              <span>{{ item.itemCount }} 首</span>
+            </div>
+          </div>
+          <Icon
+            :icon="Icons.chevronRight"
+            :width="24"
+            :height="24"
+            class="list-item__chevron"
+          />
+        </div>
+      </div>
+
+      <!-- 空状态 -->
+      <div
+        v-else
+        class="empty"
+      >
+        <Icon
+          :icon="Icons.library"
+          :width="48"
+          :height="48"
+          class="empty__icon"
+        />
+        <p class="empty__text">
+          暂无歌单，点击侧边栏"新建歌单"开始
+        </p>
+      </div>
+    </template>
+
+    <!-- ── favorite tab：B 站 API 收藏夹列表 ── -->
+    <template v-else-if="activeTab === 'favorite'">
+      <!-- 未登录 -->
+      <div
+        v-if="!auth.isLoggedIn"
+        class="empty"
+      >
+        <Icon
+          :icon="Icons.cloudOff"
+          :width="48"
+          :height="48"
+          class="empty__icon"
+        />
+        <p class="empty__text">
+          请先登录 B 站账号
+        </p>
+      </div>
+
+      <!-- 加载中 -->
+      <div
+        v-else-if="isFavoritesLoading"
+        class="empty"
+      >
+        <p class="empty__text">
+          加载中…
+        </p>
+      </div>
+
+      <!-- 加载错误 -->
+      <div
+        v-else-if="isFavoritesError"
+        class="empty"
+      >
+        <p class="empty__text">
+          加载失败：{{ favoritesError?.message ?? '未知错误' }}
+        </p>
+      </div>
+
+      <!-- 收藏夹列表 -->
+      <div
+        v-else-if="favoriteList.length > 0"
+        class="list"
+      >
+        <div
+          v-for="(folder, idx) in favoriteList"
+          :key="folder.id"
+          class="list-item"
+          :class="{ 'list-item--last': idx === favoriteList.length - 1 }"
+          @click="goToFavoritePlaylist(folder)"
+        >
+          <CoverPlaceholder
+            :title="folder.title"
+            :size="48"
+            :cover-url="favoriteCovers.get(folder.id) ?? undefined"
+            class="list-item__cover"
+          />
+          <div class="list-item__text">
+            <div class="list-item__title">
+              {{ folder.title }}
+            </div>
+            <div class="list-item__subtitle">
+              <!-- 列表项不查同步状态，避免 N+1（计划 §C.4） -->
+              <span>{{ folder.media_count }} 首</span>
+            </div>
+          </div>
+          <Icon
+            :icon="Icons.chevronRight"
+            :width="24"
+            :height="24"
+            class="list-item__chevron"
+          />
+        </div>
+      </div>
+
+      <!-- 空状态（已登录但无收藏夹） -->
+      <div
+        v-else
+        class="empty"
+      >
+        <Icon
+          :icon="Icons.library"
+          :width="48"
+          :height="48"
+          class="empty__icon"
+        />
+        <p class="empty__text">
+          B 站账号下没有收藏夹
+        </p>
+      </div>
+    </template>
+
+    <!-- ── collection / multiPage tab：阶段 D 实现 ── -->
+    <template v-else>
+      <div class="empty">
+        <Icon
+          :icon="Icons.library"
+          :width="48"
+          :height="48"
+          class="empty__icon"
+        />
+        <p class="empty__text">
+          暂未实现
+        </p>
+      </div>
+    </template>
   </div>
 </template>
 

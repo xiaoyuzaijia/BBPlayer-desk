@@ -104,6 +104,17 @@ export const usePlaybackStore = defineStore('playback', () => {
     currentTime.value = time
   }
 
+  // 由 useAudioEngine 调用：<audio> timeupdate 事件回写当前时间
+  // 与 seek 的区别：seek 是用户主动拖动，setCurrentTime 是 audio 元素被动同步
+  function setCurrentTime(t: number) {
+    currentTime.value = t
+  }
+
+  // 由 useAudioEngine 调用：<audio> play/pause 事件回写播放状态
+  function setIsPlaying(v: boolean) {
+    isPlaying.value = v
+  }
+
   function setVolume(v: number) {
     volume.value = v
   }
@@ -158,6 +169,8 @@ export const usePlaybackStore = defineStore('playback', () => {
     prev,
     seek,
     setVolume,
+    setCurrentTime,
+    setIsPlaying,
     removeFromQueue,
     cyclePlayMode,
   }

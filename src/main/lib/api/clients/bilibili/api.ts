@@ -19,6 +19,10 @@ import type {
   BilibiliUserInfo,
 } from '../../../../types/bilibili'
 import { BilibiliQrCodeLoginStatus } from '../../../../types/bilibili'
+import type {
+  BilibiliFavoriteFolder,
+  BilibiliFavoriteListContents,
+} from '../../../../../shared/ipc-types'
 
 import { bilibiliApiClient } from './client'
 import { bv2av } from './utils'
@@ -31,6 +35,22 @@ const logger = log.extend('3Party.Bilibili.Api')
  */
 const PASSPORT_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0'
+
+/**
+ * B 站音频流信息（getAudioStream 返回类型）
+ * - url: B 站 CDN 直链（已含签名）
+ * - quality: 音质 id（30216=64k / 30232=128k / 30280=192k / 30250=hi-res / 30251=dolby）
+ * - getTime: 主进程获取到的时间戳 (ms)，PlaybackFacade 按 getTime + 2h 计算 expire
+ * - type: 'dash'（独立音轨）或 'mp4'（老视频回退）
+ * - volume: 音量归一化参数（透传，本阶段不消费）
+ */
+export interface BilibiliAudioStream {
+  url: string
+  quality: number
+  getTime: number
+  type: 'dash' | 'mp4'
+  volume?: unknown
+}
 
 /**
  * B站 API 客户端类
@@ -76,9 +96,9 @@ export class BilibiliApi {
   }: {
     userMid: number
     signal?: AbortSignal
-  }): ResultAsync<unknown[], BilibiliApiError> {
+  }): ResultAsync<BilibiliFavoriteFolder[], BilibiliApiError> {
     return bilibiliApiClient
-      .get<{ list: unknown[] | null } | null>({
+      .get<{ list: BilibiliFavoriteFolder[] | null } | null>({
         endpoint: `/x/v3/fav/folder/created/list-all?up_mid=${userMid}`,
         signal,
       })
@@ -298,19 +318,18 @@ export class BilibiliApi {
   /**
    * 获取视频音频流信息
    * 优先级（在 dolby 和 hi-res 都开启的情况下）：dolby > hi-res > normal
-   * 本阶段返回类型用 unknown 占位（原版依赖 BilibiliTrack）
+   *
+   * 返回的 getTime 字段是"获取时间"（用于 expire 计算），并非过期时间
+   * PlaybackFacade 按 getTime + 2h 计算过期，写 streamExpiresAt
    */
-  getAudioStream(
-    _params: unknown,
-  ): ResultAsync<unknown, BilibiliApiError> {
-    // 完整实现见 BBPlayer 原版，本阶段保留方法签名供未来接入
-    const { bvid, cid, audioQuality, enableDolby, enableHiRes } = _params as {
-      bvid: string
-      cid: number
-      audioQuality: number
-      enableDolby: boolean
-      enableHiRes: boolean
-    }
+  getAudioStream(params: {
+    bvid: string
+    cid: number
+    audioQuality: number
+    enableDolby: boolean
+    enableHiRes: boolean
+  }): ResultAsync<BilibiliAudioStream, BilibiliApiError> {
+    const { bvid, cid, audioQuality, enableDolby, enableHiRes } = params
     const wbiParams = getWbiEncodedParams({
       bvid,
       cid: String(cid),
@@ -349,33 +368,33 @@ export class BilibiliApi {
             )
           }
           logger.debug('老视频不存在 dash，回退到使用 durl 音频流')
-          return okAsync({
+          return okAsync<BilibiliAudioStream>({
             url: durl[0].url,
             quality: 114514,
             getTime: Date.now() + 60 * 1000,
-            type: 'mp4' as const,
+            type: 'mp4',
             volume,
           })
         }
 
         if (enableDolby && dash?.dolby?.audio && dash.dolby.audio.length > 0) {
           logger.debug('优先使用 Dolby 音频流')
-          return okAsync({
+          return okAsync<BilibiliAudioStream>({
             url: dash.dolby.audio[0].baseUrl,
             quality: dash.dolby.audio[0].id,
             getTime: Date.now() + 60 * 1000,
-            type: 'dash' as const,
+            type: 'dash',
             volume,
           })
         }
 
         if (enableHiRes && dash?.flac?.audio) {
           logger.debug('次级使用 Hi-Res 音频流')
-          return okAsync({
+          return okAsync<BilibiliAudioStream>({
             url: dash.flac.audio.baseUrl,
             quality: dash.flac.audio.id,
             getTime: Date.now() + 60 * 1000,
-            type: 'dash' as const,
+            type: 'dash',
             volume,
           })
         }
@@ -396,11 +415,11 @@ export class BilibiliApi {
         )
 
         if (targetAudio) {
-          return okAsync({
+          return okAsync<BilibiliAudioStream>({
             url: targetAudio.baseUrl,
             quality: targetAudio.id,
             getTime,
-            type: 'dash' as const,
+            type: 'dash',
             volume,
           })
         }
@@ -412,11 +431,11 @@ export class BilibiliApi {
         })
         const highestQualityAudio = dash.audio[0]
         if (highestQualityAudio) {
-          return okAsync({
+          return okAsync<BilibiliAudioStream>({
             url: highestQualityAudio.baseUrl,
             quality: highestQualityAudio.id,
             getTime,
-            type: 'dash' as const,
+            type: 'dash',
             volume,
           })
         }
@@ -496,8 +515,8 @@ export class BilibiliApi {
     favoriteId: number
     pn: number
     signal?: AbortSignal
-  }): ResultAsync<unknown, BilibiliApiError> {
-    return bilibiliApiClient.get<unknown>({
+  }): ResultAsync<BilibiliFavoriteListContents, BilibiliApiError> {
+    return bilibiliApiClient.get<BilibiliFavoriteListContents>({
       endpoint: '/x/v3/fav/resource/list',
       params: {
         media_id: favoriteId.toString(),

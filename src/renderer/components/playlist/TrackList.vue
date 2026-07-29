@@ -10,14 +10,14 @@ import TrackListItem from './TrackListItem.vue'
 // - 空态：还没有歌曲
 interface Props {
   tracks: Track[]
-  // 当前播放曲目 id（用于高亮）
-  currentTrackId?: string
+  // 当前播放曲目 id（用于高亮），null 表示无当前曲目
+  currentTrackId?: number | null
   // 当前是否正在播放
   isPlaying?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
-  currentTrackId: '',
+  currentTrackId: null,
   isPlaying: false,
 })
 

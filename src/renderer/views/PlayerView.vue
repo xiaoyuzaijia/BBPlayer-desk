@@ -152,7 +152,7 @@ watch(queueOpen, (open) => {
             <CoverPlaceholder
               :title="currentTrack.title"
               :size="300"
-              :cover-url="currentTrack.coverUrl"
+              :cover-url="currentTrack.coverUrl ?? undefined"
             />
           </div>
           <!-- 曲目信息：与封面同宽对齐 -->
@@ -161,7 +161,7 @@ watch(queueOpen, (open) => {
               {{ currentTrack.title }}
             </h1>
             <p class="track-info__artist">
-              {{ currentTrack.artist }}
+              {{ currentTrack.artist?.name ?? '未知' }}
             </p>
           </div>
         </div>

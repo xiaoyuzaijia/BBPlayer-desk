@@ -22,7 +22,7 @@ export const useQueueStore = defineStore('queue', () => {
   }
 
   // 查找曲目在队列中的索引（按 id），找不到返回 -1
-  function findIndex(trackId: string): number {
+  function findIndex(trackId: number): number {
     return queue.value.findIndex((t) => t.id === trackId)
   }
 

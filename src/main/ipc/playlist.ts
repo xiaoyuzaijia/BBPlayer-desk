@@ -265,13 +265,14 @@ export function registerPlaylistIpc(mainWindow: BrowserWindow): void {
   )
 
   // 更新歌单元数据（标题/描述/封面/置顶）
+  //    ipcRenderer.invoke 会把 playlistId / payload 作为独立参数传过来
   ipcMain.handle(
     PLAYLIST_CHANNELS.updateMetadata,
     async (
       _e,
-      args: [playlistId: number, payload: UpdatePlaylistPayload],
+      playlistId: number,
+      payload: UpdatePlaylistPayload,
     ): Promise<Result<Playlist, PlaylistErrorCode>> => {
-      const [playlistId, payload] = args
       const r = await playlistService.updatePlaylistMetadata(playlistId, payload)
       if (r.isErr()) {
         return {
@@ -320,9 +321,9 @@ export function registerPlaylistIpc(mainWindow: BrowserWindow): void {
     PLAYLIST_CHANNELS.addTracks,
     async (
       _e,
-      args: [playlistId: number, trackIds: number[]],
+      playlistId: number,
+      trackIds: number[],
     ): Promise<Result<number, PlaylistErrorCode>> => {
-      const [playlistId, trackIds] = args
       const r = await playlistService.addManyTracksToLocalPlaylist(
         playlistId,
         trackIds,
@@ -345,9 +346,9 @@ export function registerPlaylistIpc(mainWindow: BrowserWindow): void {
     PLAYLIST_CHANNELS.removeTracks,
     async (
       _e,
-      args: [playlistId: number, trackIds: number[]],
+      playlistId: number,
+      trackIds: number[],
     ): Promise<Result<{ removedCount: number; missingIds: number[] }, PlaylistErrorCode>> => {
-      const [playlistId, trackIds] = args
       const r = await playlistService.batchRemoveTracksFromLocalPlaylist(
         playlistId,
         trackIds,
@@ -376,9 +377,9 @@ export function registerPlaylistIpc(mainWindow: BrowserWindow): void {
     PLAYLIST_CHANNELS.reorderTrack,
     async (
       _e,
-      args: [playlistId: number, payload: ReorderTrackPayload],
+      playlistId: number,
+      payload: ReorderTrackPayload,
     ): Promise<Result<true, PlaylistErrorCode>> => {
-      const [playlistId, payload] = args
       const r = await playlistService.reorderSingleLocalPlaylistTrack(
         playlistId,
         payload,
@@ -398,13 +399,14 @@ export function registerPlaylistIpc(mainWindow: BrowserWindow): void {
 
   // 同步远端歌单（favorite / collection / multi_page）
   // 同步进度通过 PLAYLIST_CHANNELS.syncProgress 主动推送给渲染进程
+  //    ipcRenderer.invoke 会把 remoteSyncId / type 作为独立参数传过来
   ipcMain.handle(
     PLAYLIST_CHANNELS.syncRemote,
     async (
       _e,
-      args: [remoteSyncId: number, type: import('../../shared/ipc-types').PlaylistType],
+      remoteSyncId: number,
+      type: import('../../shared/ipc-types').PlaylistType,
     ): Promise<Result<number | undefined, PlaylistErrorCode>> => {
-      const [remoteSyncId, type] = args
       if (type === 'local') {
         return {
           ok: false,

@@ -39,6 +39,8 @@ export const Icons = {
   menu: 'material-symbols:menu-rounded',
   menuOpen: 'material-symbols:menu-open-rounded',
   refresh: 'material-symbols:refresh-rounded',
+  sync: 'material-symbols:sync-rounded',
+  contentCopy: 'material-symbols:content-copy-rounded',
   undo: 'material-symbols:undo-rounded',
   redo: 'material-symbols:redo-rounded',
   checkCircle: 'material-symbols:check-circle-rounded',

@@ -1,12 +1,14 @@
 // 主进程入口
-// 启动流程：appState.load() → initDb() → startImageProxy() → createWindow() → registerAllIpc()
+// 启动流程：appState.load() → initDb() → startImageProxy() → startStreamProxy() → initPlaybackFacade() → createWindow() → registerAllIpc()
 import { app, BrowserWindow } from 'electron'
 import { createWindow } from './window'
 import { appState } from './lib/config/store'
 import { closeDb, initDb } from './lib/db'
 import { registerAllIpc } from './ipc'
 import { bilibiliAuthFacade } from './lib/facades/bilibiliAuth'
+import { initPlaybackFacade } from './lib/facades/playback'
 import { startImageProxy, stopImageProxy } from './lib/facades/imageProxy'
+import { startStreamProxy, stopStreamProxy } from './lib/facades/streamProxy'
 
 // 单例锁（防止多开）
 const gotTheLock = app.requestSingleInstanceLock()
@@ -24,6 +26,13 @@ app.whenReady().then(async () => {
   // 启动本地图片代理 server（绕过 B 站 CDN 防盗链）
   // 端口由系统分配，渲染进程通过 IPC 查询
   await startImageProxy()
+
+  // 启动本地音频流代理 server（绕过 B 站 CDN 防盗链 + 支持 Range）
+  // 渲染进程 <audio> 走 http://127.0.0.1:<port>/stream?url=...
+  const streamPort = await startStreamProxy()
+
+  // 初始化 PlaybackFacade 单例（依赖 streamProxyPort）
+  initPlaybackFacade(streamPort)
 
   const mainWindow = createWindow()
   registerAllIpc(mainWindow)
@@ -50,8 +59,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-// 应用退出时停止图片代理 server + 关闭数据库连接
+// 应用退出时停止代理 server + 关闭数据库连接
 app.on('before-quit', () => {
   stopImageProxy()
+  stopStreamProxy()
   closeDb()
 })

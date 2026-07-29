@@ -4,15 +4,24 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import {
   AUTH_CHANNELS,
+  BILIBILI_CHANNELS,
+  HISTORY_CHANNELS,
   IMAGE_CHANNELS,
+  PLAYBACK_CHANNELS,
   PLAYLIST_CHANNELS,
 } from '../shared/ipc-channels'
 import type {
+  AuthErrorCode,
   AuthStateSnapshot,
+  BilibiliFavoriteFolder,
+  BilibiliFavoriteListContents,
   BilibiliUserInfo,
   CreateLocalPlaylistPayload,
   FavoriteSyncProgress,
   GetTracksPaginatedOptions,
+  HistoryErrorCode,
+  PlaybackErrorCode,
+  PlayRecordPayload,
   Playlist,
   PlaylistErrorCode,
   PlaylistTracksPaginated,
@@ -166,6 +175,73 @@ const api = {
       ipcRenderer.on(PLAYLIST_CHANNELS.syncProgress, handler)
       return () => ipcRenderer.off(PLAYLIST_CHANNELS.syncProgress, handler)
     },
+  },
+  playback: {
+    /**
+     * 获取 track 的可播放 URL（本地代理 URL）
+     * - bilibili 源：查 DB 缓存 → 过期则调 B 站 API → 写回 DB → 包装为本地代理 URL
+     * - 命中缓存时不会调用 B 站 API
+     * 失败时返回 Result.error（code 见 PlaybackErrorCode）
+     */
+    getAudioUrl: (trackId: number) =>
+      ipcRenderer.invoke(PLAYBACK_CHANNELS.getAudioUrl, trackId) as Promise<
+        Result<string, PlaybackErrorCode>
+      >,
+    /**
+     * 强制刷新音频流 URL（缓存过期或播放失败时调用）
+     * 会跳过缓存检查，直接调 B 站 API
+     */
+    refreshAudioUrl: (trackId: number) =>
+      ipcRenderer.invoke(PLAYBACK_CHANNELS.refreshAudioUrl, trackId) as Promise<
+        Result<string, PlaybackErrorCode>
+      >,
+  },
+  history: {
+    /**
+     * 记录一次播放（<audio> ended 事件触发时调用）
+     * 异步写，失败仅 log 不阻塞切歌
+     */
+    record: (payload: PlayRecordPayload) =>
+      ipcRenderer.invoke(HISTORY_CHANNELS.record, payload) as Promise<
+        Result<true, HistoryErrorCode>
+      >,
+    /**
+     * 获取最近 N 条播放历史（默认 50，按 startTime DESC）
+     */
+    getRecent: (limit?: number) =>
+      ipcRenderer.invoke(HISTORY_CHANNELS.getRecent, limit) as Promise<
+        Result<Track[], HistoryErrorCode>
+      >,
+  },
+  bilibili: {
+    /**
+     * 获取本人所有收藏夹列表（直接从 B 站 API 拉，未同步的也返回）
+     * 未登录或 cookie 缺失时返回 NOT_LOGGED_IN 错误
+     */
+    getFavoritePlaylists: () =>
+      ipcRenderer.invoke(
+        BILIBILI_CHANNELS.getFavoritePlaylists,
+      ) as Promise<Result<BilibiliFavoriteFolder[], AuthErrorCode>>,
+    /**
+     * 获取收藏夹内容（分页，pn 从 1 开始，ps=40）
+     */
+    getFavoriteListContents: (favoriteId: number, pn: number) =>
+      ipcRenderer.invoke(
+        BILIBILI_CHANNELS.getFavoriteListContents,
+        favoriteId,
+        pn,
+      ) as Promise<Result<BilibiliFavoriteListContents, AuthErrorCode>>,
+    /**
+     * 按 bvid 入库单首 track（远端点击播放用）
+     * 走 facade.addTrackFromBilibiliApi：拉视频详情 → findOrCreate artist/track
+     * 返回入库后的 IPC Track
+     */
+    addTrackByBvid: (bvid: string, cid?: number) =>
+      ipcRenderer.invoke(
+        BILIBILI_CHANNELS.addTrackByBvid,
+        bvid,
+        cid,
+      ) as Promise<Result<Track, PlaylistErrorCode>>,
   },
 }
 

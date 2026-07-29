@@ -107,7 +107,7 @@ function removeAt(index: number) {
               :title="track.title"
               :size="40"
               :border-radius="8"
-              :cover-url="track.coverUrl"
+              :cover-url="track.coverUrl ?? undefined"
               class="queue__cover"
             />
 
@@ -117,7 +117,7 @@ function removeAt(index: number) {
                 {{ track.title }}
               </div>
               <div class="queue__track-artist">
-                {{ track.artist }}
+                {{ track.artist?.name ?? '未知' }}
               </div>
             </div>
 

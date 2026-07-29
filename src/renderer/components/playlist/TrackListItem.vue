@@ -49,11 +49,11 @@ defineEmits<{
       <span v-else>{{ index }}</span>
     </div>
 
-    <!-- 48×48 封面（CoverPlaceholder 占位） -->
+    <!-- 48×48 封面（CoverPlaceholder 占位，coverUrl 为 null 时走占位符） -->
     <CoverPlaceholder
       :title="track.title"
       :size="48"
-      :cover-url="track.coverUrl"
+      :cover-url="track.coverUrl ?? undefined"
       class="track__cover"
     />
 
@@ -63,7 +63,7 @@ defineEmits<{
         {{ track.title }}
       </div>
       <div class="track__subtitle">
-        {{ track.artist }}
+        {{ track.artist?.name ?? '未知' }}
       </div>
     </div>
 

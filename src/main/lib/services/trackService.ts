@@ -297,6 +297,76 @@ export class TrackService {
   }
 
   /**
+   * 更新 bilibiliMetadata 的音频流 URL 缓存
+   * PlaybackFacade 在拉取新音频流 URL 后调用，写回 audioStreamUrl + streamExpiresAt
+   * 仅 bilibili 源 track 有效，其他源返回 Validation 错误
+   */
+  public updateBilibiliAudioStream(
+    trackId: number,
+    audioStreamUrl: string,
+    streamExpiresAt: Date,
+  ): ResultAsync<true, ServiceError | DatabaseError> {
+    return ResultAsync.fromPromise(
+      Promise.resolve(
+        this.db
+          .update(schema.bilibiliMetadata)
+          .set({
+            audioStreamUrl,
+            streamExpiresAt,
+          })
+          .where(eq(schema.bilibiliMetadata.trackId, trackId))
+          .run(),
+      ),
+      (e) =>
+        new DatabaseError(`更新音频流 URL 缓存失败：trackId=${trackId}`, {
+          cause: e,
+        }),
+    ).andThen((result) => {
+      if (result.changes === 0) {
+        return errAsync(
+          createValidationError(
+            `track ${trackId} 不存在 bilibiliMetadata（可能非 bilibili 源或元数据未创建）`,
+          ),
+        )
+      }
+      return okAsync(true as const)
+    })
+  }
+
+  /**
+   * 更新 bilibiliMetadata.cid
+   * PlaybackFacade 在播放时若发现 cid=null（如 syncFavorite 批量入库未填 cid），
+   * 会调 getVideoDetails 拿 cid 后回写。仅 bilibili 源 track 有效。
+   */
+  public updateBilibiliCid(
+    trackId: number,
+    cid: number,
+  ): ResultAsync<true, ServiceError | DatabaseError> {
+    return ResultAsync.fromPromise(
+      Promise.resolve(
+        this.db
+          .update(schema.bilibiliMetadata)
+          .set({ cid })
+          .where(eq(schema.bilibiliMetadata.trackId, trackId))
+          .run(),
+      ),
+      (e) =>
+        new DatabaseError(`更新 bilibiliMetadata.cid 失败：trackId=${trackId}`, {
+          cause: e,
+        }),
+    ).andThen((result) => {
+      if (result.changes === 0) {
+        return errAsync(
+          createValidationError(
+            `track ${trackId} 不存在 bilibiliMetadata（可能非 bilibili 源或元数据未创建）`,
+          ),
+        )
+      }
+      return okAsync(true as const)
+    })
+  }
+
+  /**
    * 根据 Bilibili 元数据获取 track
    */
   public getTrackByBilibiliMetadata(

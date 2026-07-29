@@ -12,7 +12,7 @@ import MD3Switch from '../components/common/MD3Switch.vue'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
 import QrLoginPanel from '../components/layout/QrLoginPanel.vue'
 import { useAuthStore } from '../stores/auth'
-import { useBilibiliUserInfo } from '../composables/useBilibiliUserInfo'
+import { useBilibiliUserInfo } from '../composables/queries/bilibili/user'
 
 const router = useRouter()
 const auth = useAuthStore()

@@ -1,9 +1,11 @@
-// 曲目类型：所有 store 共享的曲目数据结构
-// 字段对齐 BBPlayer 的 Track（精简版，未来接入 DB 时再扩展）
-export interface Track {
-  id: string
-  title: string
-  artist: string
-  coverUrl: string
-  duration: number
-}
+// 渲染进程曲目类型：直接 re-export 共享类型，避免双份维护
+// 阶段 B 起对齐 src/shared/ipc-types.ts（id: number + union 类型）
+export type {
+  Artist,
+  BilibiliTrack,
+  BilibiliTrackMetadata,
+  LocalTrack,
+  LocalTrackMetadata,
+  Track,
+  TrackSource,
+} from '../../shared/ipc-types'

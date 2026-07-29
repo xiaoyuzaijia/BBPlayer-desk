@@ -1,15 +1,22 @@
 // B 站用户信息查询（TanStack Query）
+//
 // enabled: auth.isLoggedIn 控制未登录不发请求
 // staleTime 24h，与 BBPlayer usePersonalInformation 一致
 import { useQuery } from '@tanstack/vue-query'
 
-import { authQueryKeys } from '../lib/queryClient'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../../../stores/auth'
+
+// ─────────────────────────────────────────
+// query keys 就近导出
+// ─────────────────────────────────────────
+export const userQueryKeys = {
+  userInfo: ['auth', 'userInfo'] as const,
+}
 
 export function useBilibiliUserInfo() {
   const auth = useAuthStore()
   return useQuery({
-    queryKey: authQueryKeys.userInfo,
+    queryKey: userQueryKeys.userInfo,
     queryFn: async () => {
       const res = await window.api.auth.getUserInfo()
       if (!res.ok) {
