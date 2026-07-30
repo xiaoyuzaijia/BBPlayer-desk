@@ -6,15 +6,14 @@ import CoverPlaceholder from '../common/CoverPlaceholder.vue'
 import IconButton from '../common/IconButton.vue'
 import type { Playlist } from '../../types/playlist'
 import type { Track } from '../../types/track'
-import { totalDuration } from '../../stores/playlist'
 
 // 歌单详情页头部：参考 BBPlayer LocalPlaylistHeader.tsx
-// 布局：[120 封面] [标题 / N首•总时长 / 描述]
+// 布局：[120 封面] [标题 / N首 / 描述]
 //      [▶ 播放全部] [⟳ 同步(仅同步型)] [⧉ 复制] [↓ 下载] [→ 跳转本地] [⋯ 更多]
 // 复制 / 下载：icon-only IconButton，暂未实现功能（disabled 预留位）
 interface Props {
   playlist: Playlist
-  // 曲目列表（用于计算总时长，由 PlaylistView 通过 usePlaylistTracks 拿到后传入）
+  // 曲目列表（由 PlaylistView 通过 usePlaylistTracks 拿到后传入）
   tracks: Track[]
   // 是否正在同步远端歌单（控制同步按钮 disabled）
   syncing?: boolean
@@ -39,19 +38,6 @@ defineEmits<{
 
 // 曲目数：优先用 playlist.itemCount（IPC 返回的元数据），fallback 到 tracks.length
 const trackCount = computed(() => props.playlist.itemCount || props.tracks.length)
-// 总时长（秒）：用独立工具函数（非 store 方法）
-const totalDurationSec = computed(() => totalDuration(props.tracks))
-// 总时长格式化（hh:mm:ss 或 mm:ss）
-const totalDurationText = computed(() => {
-  const sec = totalDurationSec.value
-  const h = Math.floor(sec / 3600)
-  const m = Math.floor((sec % 3600) / 60)
-  const s = Math.floor(sec % 60)
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  }
-  return `${m}:${String(s).padStart(2, '0')}`
-})
 
 // 按歌单类型决定按钮显隐
 // - local:        不显示 同步
@@ -88,8 +74,6 @@ const typeLabels: Record<Playlist['type'], string> = {
           <!-- 类型徽章（小标签） -->
           <span class="header__type-badge">{{ typeLabels[playlist.type] }}</span>
           <span>{{ trackCount }} 首</span>
-          <span class="header__dot">·</span>
-          <span>总时长 {{ totalDurationText }}</span>
         </div>
         <p
           v-if="playlist.description"
@@ -193,9 +177,6 @@ const typeLabels: Record<Playlist['type'], string> = {
   font-size: 14px; /* bodyMedium */
   color: var(--md-on-surface-variant);
   margin-bottom: 8px;
-}
-.header__dot {
-  opacity: 0.6;
 }
 /* 类型徽章：小圆角胶囊 */
 .header__type-badge {

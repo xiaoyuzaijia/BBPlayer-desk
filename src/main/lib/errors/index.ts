@@ -38,3 +38,10 @@ export class ThirdPartyError extends CustomError {
     this.data = opts?.data
   }
 }
+
+/**
+ * 歌词未找到错误（多源竞速全部失败时抛）
+ * 对应 BBPlayer LyricNotFoundError（type='LyricNotFound'）
+ * BBPlayer 把它放在 errors/index.ts，本项目保持一致（避免循环依赖）
+ */
+export class LyricNotFoundError extends CustomError {}

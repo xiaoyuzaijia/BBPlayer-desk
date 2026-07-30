@@ -7,6 +7,7 @@ import {
   BILIBILI_CHANNELS,
   HISTORY_CHANNELS,
   IMAGE_CHANNELS,
+  LYRIC_CHANNELS,
   PLAYBACK_CHANNELS,
   PLAYLIST_CHANNELS,
 } from '../shared/ipc-channels'
@@ -20,6 +21,9 @@ import type {
   FavoriteSyncProgress,
   GetTracksPaginatedOptions,
   HistoryErrorCode,
+  LyricErrorCode,
+  LyricFileData,
+  LyricSource,
   PlaybackErrorCode,
   PlayRecordPayload,
   Playlist,
@@ -242,6 +246,29 @@ const api = {
         bvid,
         cid,
       ) as Promise<Result<Track, PlaylistErrorCode>>,
+  },
+  lyric: {
+    /**
+     * 获取 track 的歌词（缓存 + 网络竞速）
+     * - bilibili 源：先反查 bgm_info.music_title，再 QQ+酷狗 多源竞速
+     * - 命中本地缓存（lrc 或 errorMessage）直接返回
+     * - 多源全失败时返回 NOT_FOUND 错误码
+     * @param trackId track.id（DB 主键）
+     * @param source 歌词源偏好，默认 'auto'（多源竞速）
+     */
+    getLyrics: (trackId: number, source: LyricSource = 'auto') =>
+      ipcRenderer.invoke(
+        LYRIC_CHANNELS.getLyrics,
+        trackId,
+        source,
+      ) as Promise<Result<LyricFileData, LyricErrorCode>>,
+    /**
+     * 清空所有歌词缓存（设置页"清除缓存"用）
+     */
+    clearAllLyrics: () =>
+      ipcRenderer.invoke(LYRIC_CHANNELS.clearAllLyrics) as Promise<
+        Result<true, LyricErrorCode>
+      >,
   },
 }
 

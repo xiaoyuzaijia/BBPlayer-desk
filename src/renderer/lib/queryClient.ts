@@ -4,6 +4,7 @@
 // - composables/queries/db/playlist.ts → playlistQueryKeys
 // - composables/queries/bilibili/user.ts → userQueryKeys
 // - composables/queries/bilibili/favorite.ts → bilibiliFavoriteQueryKeys（阶段 B 新增）
+// - composables/queries/lyric/lyric.ts → lyricQueryKeys（阶段 6 新增）
 //
 // mutation 通过 import 同文件 keys 来 invalidate，不再集中定义
 import { QueryClient } from '@tanstack/vue-query'

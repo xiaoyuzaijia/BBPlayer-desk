@@ -1,14 +1,16 @@
 // 主进程入口
-// 启动流程：appState.load() → initDb() → startImageProxy() → startStreamProxy() → initPlaybackFacade() → createWindow() → registerAllIpc()
+// 启动流程：appState.load() → initDb() → startImageProxy() → startStreamProxy() → initPlaybackFacade() → initLyricFacade() → createWindow() → registerAllIpc()
 import { app, BrowserWindow } from 'electron'
 import { createWindow } from './window'
 import { appState } from './lib/config/store'
 import { closeDb, initDb } from './lib/db'
 import { registerAllIpc } from './ipc'
 import { bilibiliAuthFacade } from './lib/facades/bilibiliAuth'
+import { initLyricFacade } from './lib/facades/lyric'
 import { initPlaybackFacade } from './lib/facades/playback'
 import { startImageProxy, stopImageProxy } from './lib/facades/imageProxy'
 import { startStreamProxy, stopStreamProxy } from './lib/facades/streamProxy'
+import { getLyricService } from './lib/services'
 
 // 单例锁（防止多开）
 const gotTheLock = app.requestSingleInstanceLock()
@@ -23,6 +25,10 @@ app.whenReady().then(async () => {
   // 初始化 SQLite + 应用 migrations（必须在任何 service 调用前完成）
   initDb()
 
+  // 确保歌词目录存在（userData/lyrics/）
+  // 必须在 initLyricFacade 之前，否则首次 getLyrics 写文件会失败
+  await getLyricService().ensureDir()
+
   // 启动本地图片代理 server（绕过 B 站 CDN 防盗链）
   // 端口由系统分配，渲染进程通过 IPC 查询
   await startImageProxy()
@@ -33,6 +39,9 @@ app.whenReady().then(async () => {
 
   // 初始化 PlaybackFacade 单例（依赖 streamProxyPort）
   initPlaybackFacade(streamPort)
+
+  // 初始化 LyricFacade 单例（依赖 lyricService，已在 ensureDir 时惰性创建）
+  initLyricFacade()
 
   const mainWindow = createWindow()
   registerAllIpc(mainWindow)

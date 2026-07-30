@@ -44,3 +44,8 @@ export const BILIBILI_CHANNELS = {
   getFavoriteListContents: 'bilibili:getFavoriteListContents',
   addTrackByBvid: 'bilibili:addTrackByBvid', // 阶段 D 用，远端点击播放
 } as const
+
+export const LYRIC_CHANNELS = {
+  getLyrics: 'lyric:getLyrics', // 按 trackId 获取歌词（缓存 + 网络竞速）
+  clearAllLyrics: 'lyric:clearAllLyrics', // 清空所有歌词缓存
+} as const

@@ -41,6 +41,44 @@ export type PlaybackErrorCode =
 export type HistoryErrorCode = 'DATABASE' | 'SERVICE' | 'UNKNOWN'
 
 /**
+ * lyric 模块错误码
+ */
+export type LyricErrorCode =
+  | 'NETWORK'
+  | 'THIRD_PARTY'
+  | 'NOT_FOUND'
+  | 'SERVICE'
+  | 'FACADE'
+  | 'BILIBILI_REJECTED'
+  | 'UNKNOWN'
+
+/**
+ * 歌词源（用户偏好，auto 表示多源竞速）
+ * 不含 netease（Q1 决策不做网易云）
+ */
+export type LyricSource = 'auto' | 'qqmusic' | 'kugou'
+
+/**
+ * 歌词文件数据（跨 IPC 传输）
+ * 与主进程 LyricFileData 字段一致，但 id 用 track.uniqueKey
+ * lrc / tlyric / romalrc 是 SPL 格式字符串，渲染进程调 parseAndMergeLyrics 解析
+ */
+export interface LyricFileData {
+  /** 曲目唯一 ID（track.uniqueKey） */
+  id: string
+  /** 缓存写入时间（ms epoch） */
+  updateTime: number
+  /** 主歌词（SPL 格式字符串） */
+  lrc?: string
+  /** 翻译歌词（QQ 音乐可能返回，酷狗恒为 undefined） */
+  tlyric?: string
+  /** 罗马音歌词（QQ/酷狗均不返回，保留字段与 BBPlayer 对齐） */
+  romalrc?: string
+  /** 获取失败时的展示文本（多源全失败时落盘，避免反复重试） */
+  errorMessage?: string
+}
+
+/**
  * Result 包装类型：主进程 IPC handler 返回值统一用此类型
  * 替代 throw，错误信息结构化
  */

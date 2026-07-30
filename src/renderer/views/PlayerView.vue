@@ -23,7 +23,8 @@ const router = useRouter()
 // PlayerView 用 playback store 拿控制状态 + 控制动作
 const playback = usePlaybackStore()
 const theme = useThemeStore()
-const { currentTrack, isPlaying, currentTime, hasPrev, hasNext, playMode } =
+// 进度条用 smoothCurrentTime（60fps rAF 平滑插值），而非 currentTime（4Hz timeupdate 卡顿）
+const { currentTrack, isPlaying, smoothCurrentTime, hasPrev, hasNext, playMode } =
   storeToRefs(playback)
 
 // Lottie 染色：根据亮暗模式取对应硬编码颜色（与 style.css 中 --md-* 保持一致）
@@ -174,7 +175,7 @@ watch(queueOpen, (open) => {
         >
           <!-- 进度条 + 时间标签（自绘滑块，scrub 预览与 seek 分离） -->
           <PlayerProgressBar
-            :current="currentTime"
+            :current="smoothCurrentTime"
             :duration="currentTrack.duration"
             @seek="playback.seek"
           />

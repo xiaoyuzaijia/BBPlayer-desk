@@ -1,24 +1,80 @@
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { Track } from '../types/track'
 import { usePlayerStore } from './player'
 import { useQueueStore } from './queue'
 
+// 偏差阈值：插值位置与真实位置差超过此值时，以真实位置为准重置（与 BBPlayer 一致）
+const DRIFT_THRESHOLD = 0.05
+
 // ── playback store（播放控制 + 编排）──
 // 参考 BBPlayer：播放控制状态独立于队列数据
-// 包含：isPlaying / currentTime / volume / playMode + play/pause/seek/next/prev
+// 包含：isPlaying / currentTime / smoothCurrentTime / volume / playMode + play/pause/seek/next/prev
 // 编排 player store（镜像）+ queue store（数据）：写队列时同步更新 player 镜像
+//
+// 双轨 currentTime 设计（参考 BBPlayer useSmoothProgress + useTrackProgress）：
+// - currentTime：4Hz 真实位置（timeupdate 回写），供 useAudioEngine seek 校正、播放历史记录用
+// - smoothCurrentTime：60fps rAF 插值（仅 isPlaying 时累加 + 0.05s 偏差校正），
+//   供进度条、歌词 store 等需要平滑显示的 UI 消费
+//   单一 rAF 循环在 store 内启动，全局共享，避免多个 composable 各起循环
 export const usePlaybackStore = defineStore('playback', () => {
   const player = usePlayerStore()
   const queueStore = useQueueStore()
 
   // ── 播放控制状态 ──
   const isPlaying = ref(false)
+  // 4Hz 真实位置（timeupdate 回写）—— 精确但不平滑
   const currentTime = ref(0)
+  // 60fps 平滑位置（rAF 插值）—— 平滑但可能微小漂移（由 currentTime 校正）
+  const smoothCurrentTime = ref(0)
   const volume = ref(80)
 
   // ── 播放模式：all / one / shuffle 三态互斥（参考 BBPlayer playMode）──
   const playMode = ref<'all' | 'one' | 'shuffle'>('all')
+
+  // ── smoothCurrentTime 的 rAF 插值循环 ──
+  // 每帧累加 deltaTime/1000（仅 isPlaying 时），由 currentTime 做偏差校正
+  let rafId: number | null = null
+  let lastFrameTime: number | null = null
+
+  function tick(now: number) {
+    if (lastFrameTime !== null) {
+      const deltaMs = now - lastFrameTime
+      if (isPlaying.value) {
+        smoothCurrentTime.value += deltaMs / 1000
+      }
+    }
+    lastFrameTime = now
+    rafId = requestAnimationFrame(tick)
+  }
+
+  // 偏差校正：currentTime（timeupdate 真实位置）变化时检查
+  // - 偏差 > 0.05s：以真实位置为准重置（插值漂移了）
+  // - 暂停时：强制重置（暂停→恢复时位置可能跳）
+  watch(currentTime, (realTime) => {
+    const diff = Math.abs(smoothCurrentTime.value - realTime)
+    if (diff > DRIFT_THRESHOLD || !isPlaying.value) {
+      smoothCurrentTime.value = realTime
+    }
+  })
+
+  // 恢复播放时重置（避免暂停→恢复时 smoothCurrentTime 漂移）
+  watch(isPlaying, (playing) => {
+    if (playing) {
+      smoothCurrentTime.value = currentTime.value
+    }
+  })
+
+  // 启动 rAF 循环（store 首次实例化时启动，应用生命周期内常驻）
+  rafId = requestAnimationFrame(tick)
+
+  // 清理：store dispose 时停止 rAF（应用卸载时）
+  onScopeDispose(() => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
+  })
 
   // ── 派生 ──
   const currentTrack = computed<Track | null>(() => player.currentTrack)
@@ -152,6 +208,7 @@ export const usePlaybackStore = defineStore('playback', () => {
     // 状态
     isPlaying,
     currentTime,
+    smoothCurrentTime,
     volume,
     playMode,
     // 派生

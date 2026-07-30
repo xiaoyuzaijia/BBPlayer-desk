@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
 import { formatTime } from '../../utils/format'
 
-// 播放器进度条 Props
-// 自定义实现：竖条 thumb + track 在 thumb 两侧 mask 挖空（参考 MD3 active slider 视觉）
+// 播放器进度条：竖条 thumb + 双段 track（clip-path 裁剪）
 interface Props {
   // 当前播放时间（来自 store，正常播放时由外部驱动）
   current: number
@@ -33,14 +33,36 @@ const displayPosition = computed(() =>
   isScrubbing.value ? scrubPosition.value : props.current,
 )
 
-// 填充百分比，传给 CSS 变量驱动 track 渐变切分 + mask 挖空
-const fillPercent = computed(() => {
-  if (props.duration <= 0) return 0
-  return Math.min(100, Math.max(0, (displayPosition.value / props.duration) * 100))
+// 容器宽度（像素），ResizeObserver 观测；首次可能为 0
+const containerRef = ref<HTMLDivElement | null>(null)
+const containerWidth = ref(0)
+useResizeObserver(containerRef, ([entry]) => {
+  containerWidth.value = entry.contentRect.width
 })
 
-// 容器 ref：用于把 clientX 换算成时间
-const containerRef = ref<HTMLDivElement | null>(null)
+// thumb / track 共用像素值：displayPosition → 容器内 x 坐标
+const fillPx = computed(() => {
+  if (props.duration <= 0 || containerWidth.value === 0) return 0
+  return Math.min(
+    containerWidth.value,
+    Math.max(0, (displayPosition.value / props.duration) * containerWidth.value),
+  )
+})
+
+// track 双段 clip 裁剪值（px），用 clip-path 替代 scaleX，保留 border-radius 不形变
+// gap = thumb 半宽 + 留空：静止 6px / 拖动 5px
+// filled：从右侧裁掉 (containerWidth - fillPx + gap)，只露出左侧填充部分
+// remaining：从左侧裁掉 (fillPx + gap)，只露出右侧剩余部分
+const filledClipRight = computed(() => {
+  if (containerWidth.value <= 0) return 0
+  const gap = isScrubbing.value ? 5 : 6
+  return Math.max(0, containerWidth.value - fillPx.value + gap)
+})
+const remainClipLeft = computed(() => {
+  if (containerWidth.value <= 0) return 0
+  const gap = isScrubbing.value ? 5 : 6
+  return Math.max(0, fillPx.value + gap)
+})
 function clientXToTime(clientX: number): number {
   const el = containerRef.value
   if (!el || props.duration <= 0) return 0
@@ -111,16 +133,21 @@ function onKeydown(e: KeyboardEvent) {
       :aria-valuenow="Math.round(displayPosition)"
       :aria-disabled="!interactive"
       :tabindex="interactive ? 0 : -1"
-      :style="{ '--progress-fill': fillPercent + '%' }"
+      :style="{
+        '--progress-fill-px': fillPx + 'px',
+        '--progress-filled-clip-right': filledClipRight + 'px',
+        '--progress-remain-clip-left': remainClipLeft + 'px',
+      }"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
       @keydown="onKeydown"
     >
-      <!-- 轨道：linear-gradient 切 primary/surface-variant + mask 在 thumb 位置挖空 -->
-      <div class="progress__track" />
-      <!-- thumb：垂直胶囊，left=fill%，translateX(-50%) 居中 -->
+      <!-- filled / remaining 双段轨道 -->
+      <div class="progress__track-filled" />
+      <div class="progress__track-remaining" />
+      <!-- thumb -->
       <div class="progress__thumb" />
     </div>
     <div class="progress__time">
@@ -137,20 +164,15 @@ function onKeydown(e: KeyboardEvent) {
   gap: 4px;
 }
 
-/* ── 容器：24px 高的 hit area，track 与 thumb 都绝对定位居中 ──
-   --thumb-half: thumb 半宽，用于 mask 挖空范围计算
-   --track-gap: thumb 两侧额外空白宽度 */
+/* ── 容器：24px 高 hit area ── */
 .progress__slider {
   position: relative;
   width: 100%;
   height: 24px;
   cursor: pointer;
-  --thumb-half: 2px; /* 静止 thumb 4px / 2 */
-  --track-gap: 4px;
   touch-action: none; /* 阻止触摸滚动，让 pointer events 接管 */
 }
 .progress__slider--scrubbing {
-  --thumb-half: 1px; /* 拖动 thumb 2px / 2，变细 */
   cursor: grabbing;
 }
 .progress__slider[aria-disabled='true'] {
@@ -158,61 +180,46 @@ function onKeydown(e: KeyboardEvent) {
   opacity: 0.38;
 }
 
-/* ── track：4px 高，水平居中；scrubbing 时变 8px ── */
-.progress__track {
+/* ── track 双段：width:100% + clip-path:inset() 裁剪可见区域
+   filled 从左裁右，remaining 从右裁左，与 thumb 共享 fillPx。
+   clip-path 不改变元素渲染，border-radius 始终保持 2px 无形变。 */
+.progress__track-filled,
+.progress__track-remaining {
   position: absolute;
-  left: 0;
-  right: 0;
   top: 50%;
   height: 4px;
   border-radius: 2px;
   transform: translateY(-50%);
-  background: linear-gradient(
-    to right,
-    var(--md-primary) 0%,
-    var(--md-primary) var(--progress-fill, 0%),
-    var(--md-surface-variant) var(--progress-fill, 0%),
-    var(--md-surface-variant) 100%
-  );
-  /* mask：在 thumb 位置挖空一个透明窗口，让 track 视觉上断开成两段
-     窗口半宽 = thumb 半宽 + 额外空白 */
-  --mask-half: calc(var(--thumb-half) + var(--track-gap));
-  -webkit-mask: linear-gradient(
-    to right,
-    #000 0,
-    #000 calc(var(--progress-fill, 0%) - var(--mask-half)),
-    transparent calc(var(--progress-fill, 0%) - var(--mask-half)),
-    transparent calc(var(--progress-fill, 0%) + var(--mask-half)),
-    #000 calc(var(--progress-fill, 0%) + var(--mask-half)),
-    #000 100%
-  );
-  mask: linear-gradient(
-    to right,
-    #000 0,
-    #000 calc(var(--progress-fill, 0%) - var(--mask-half)),
-    transparent calc(var(--progress-fill, 0%) - var(--mask-half)),
-    transparent calc(var(--progress-fill, 0%) + var(--mask-half)),
-    #000 calc(var(--progress-fill, 0%) + var(--mask-half)),
-    #000 100%
-  );
   transition: height 0.2s ease, border-radius 0.2s ease;
 }
-.progress__slider--scrubbing .progress__track {
+.progress__track-filled {
+  left: 0;
+  width: 100%;
+  background: var(--md-primary);
+  clip-path: inset(0 var(--progress-filled-clip-right, 0px) 0 0);
+}
+.progress__track-remaining {
+  right: 0;
+  width: 100%;
+  background: var(--md-surface-variant);
+  clip-path: inset(0 0 0 var(--progress-remain-clip-left, 0px));
+}
+.progress__slider--scrubbing .progress__track-filled,
+.progress__slider--scrubbing .progress__track-remaining {
   height: 8px;
   border-radius: 4px;
 }
 
-/* ── thumb：垂直胶囊，绝对定位 left=fill%，translate(-50%,-50%) 居中 ──
-   静止：4×16 短竖条；scrubbing：2×24 细长竖条（被捏住拉长） */
+/* ── thumb：垂直胶囊，compositor 定位 ── */
 .progress__thumb {
   position: absolute;
   top: 50%;
-  left: var(--progress-fill, 0%);
+  left: 0;
   width: 4px;
   height: 16px;
   border-radius: 2px;
   background: var(--md-primary);
-  transform: translate(-50%, -50%);
+  transform: translateX(calc(var(--progress-fill-px, 0px) - 50%)) translateY(-50%);
   transition: width 0.15s ease, height 0.15s ease, border-radius 0.15s ease;
 }
 .progress__slider--scrubbing .progress__thumb {

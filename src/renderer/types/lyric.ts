@@ -1,15 +1,34 @@
-// 歌词类型：所有 store / 组件共享的歌词数据结构
-// 字段对齐 BBPlayer 调研报告中的方案 A（主歌词 + 翻译合并）
+/**
+ * 歌词相关类型
+ *
+ * `LyricLine` / `LyricSpan` / `SplLyricData` 直接从 splash 包 re-export，
+ * 保证渲染进程各处使用的类型与解析器输出严格一致。
+ *
+ * splash 源自 BBPlayer `packages/splash/`，1:1 复刻，详见 docs/plan/9-歌词计划.md。
+ */
+export type { LyricLine, LyricSpan, SplLyricData } from '../utils/splash/src/types'
 
-// 单行歌词：时间戳（秒）+ 主歌词 + 可选翻译
-export interface LyricLine {
-  time: number       // 秒
-  text: string       // 主歌词（空字符串表示纯音乐段）
-  translation?: string  // 翻译（可选，由 mergeLyrics 合并而来）
-}
-
-// 整首歌的歌词文件解析结果
-export interface LyricFile {
-  lines: LyricLine[]
-  hasTranslation: boolean  // 是否含翻译（用于 UI 决策）
+/**
+ * 歌词文件持久化结构（与主进程 `userData/lyrics/{uniqueKey}.json` 对齐）
+ *
+ * 与 BBPlayer `LyricFileData` 的差异：
+ * - 去掉 `manualSkip`（Q8 决策不做跳过标记）
+ * - 去掉 `misc.userOffset`（Q5 决策不做偏移量）
+ *
+ * 保留 `tlyric` / `romalrc` 字段：API 客户端层 1:1 复刻 BBPlayer，
+ * QQ 音乐会返回 trans（翻译），保留字段以便后续灵活启用。
+ */
+export interface LyricFileData {
+	/** 曲目唯一 ID（track.uniqueKey） */
+	id: string
+	/** 缓存写入时间（ms epoch） */
+	updateTime: number
+	/** 主歌词（SPL 格式字符串，渲染进程调 parseAndMergeLyrics 解析为 LyricLine[]） */
+	lrc?: string
+	/** 翻译歌词（SPL 格式字符串，QQ 音乐可能返回，酷狗恒为 undefined） */
+	tlyric?: string
+	/** 罗马音歌词（QQ/酷狗均不返回，保留字段与 BBPlayer 对齐） */
+	romalrc?: string
+	/** 获取失败时的展示文本（多源全失败时落盘，避免反复重试） */
+	errorMessage?: string
 }

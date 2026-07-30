@@ -3,7 +3,10 @@ import type { LyricLine } from '../../types/lyric'
 
 // 单行歌词组件：主歌词 + 可选翻译
 // 当前行（active=true）放大 + primary 色；非当前行 on-surface-variant
-// 点击整行触发 seek 事件，由父组件调用 playback.seek(line.time)
+// 点击整行触发 seek 事件，由父组件调用 playback.seek(startTime/1000)
+//
+// LyricLine.startTime 单位是毫秒，playback.seek 接收秒 → 点击时需 / 1000
+// LyricLine.content 是主歌词文本（splash 类型字段，非旧版的 text）
 
 defineProps<{
   line: LyricLine
@@ -21,10 +24,10 @@ defineEmits<{
     type="button"
     class="lyric-line"
     :class="{ 'lyric-line--active': active }"
-    @click="$emit('seek', line.time)"
+    @click="$emit('seek', line.startTime / 1000)"
   >
     <p class="lyric-line__main">
-      {{ line.text }}
+      {{ line.content }}
     </p>
     <p
       v-if="hasTranslation && line.translation"
@@ -41,7 +44,7 @@ defineEmits<{
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  padding: 8px 16px;
+  padding: 10px 16px;
   border: none;
   background: transparent;
   cursor: pointer;
