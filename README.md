@@ -1,5 +1,13 @@
-# Vue 3 + TypeScript + Vite
+## BBPlayer-desk
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+![截图1](.\docs\asset\截图1.png)
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+![截图2](.\docs\asset\截图2.png)
+
+![截图3](.\docs\asset\截图3.png)
+
+![截图4](.\docs\asset\截图4.png)
+
+## 感谢
+
+<https://github.com/bbplayer-app/BBPlayer>
