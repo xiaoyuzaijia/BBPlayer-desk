@@ -556,7 +556,8 @@ export class PlaylistService {
 
   /**
    * 用一个 track ID 数组**完全替换**播放列表内容
-   * 远程同步专用：删旧全量写新，并更新 itemCount / lastSyncedAt
+   * 远程同步专用：删旧全量写新，并更新 itemCount / lastSyncedAt / coverUrl
+   * coverUrl 取第一首曲目的封面（空歌单置 null，每次同步都覆盖，不考虑手动设置的封面）
    * 同步变体：返回 Result，可在事务回调内调用
    */
   public replacePlaylistAllTracksSync(
@@ -589,11 +590,24 @@ export class PlaylistService {
           .run()
       }
 
+      // 封面同步为第一首歌的封面（空歌单置 null）
+      // 与 BBPlayer 不同：BBPlayer 同步不回写封面，本项目按需求每次同步都覆盖
+      const firstTrackCover =
+        trackIds.length > 0
+          ? (this.db.query.tracks
+              .findFirst({
+                where: eq(schema.tracks.id, trackIds[0]),
+                columns: { coverUrl: true },
+              })
+              .sync()?.coverUrl ?? null)
+          : null
+
       this.db
         .update(schema.playlists)
         .set({
           itemCount: trackIds.length,
           lastSyncedAt: new Date(),
+          coverUrl: firstTrackCover,
         })
         .where(eq(schema.playlists.id, playlistId))
         .run()
@@ -610,7 +624,8 @@ export class PlaylistService {
 
   /**
    * 用一个 track ID 数组**完全替换**播放列表内容
-   * 远程同步专用：删旧全量写新，并更新 itemCount / lastSyncedAt
+   * 远程同步专用：删旧全量写新，并更新 itemCount / lastSyncedAt / coverUrl
+   * coverUrl 取第一首曲目的封面（空歌单置 null，每次同步都覆盖，不考虑手动设置的封面）
    */
   public replacePlaylistAllTracks(
     playlistId: number,

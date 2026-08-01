@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useThemeStore } from '../../stores/theme'
+import { resolveBilibiliImageUrl } from '../../utils/imageUrl'
 
 // 封面占位符 Props
 // 参考 BBPlayer CoverWithPlaceHolder.tsx：标题 hash → HSL 渐变 + 首字母
@@ -12,6 +13,7 @@ interface Props {
   // 圆角，默认 size * 0.22（MD3 超椭圆近似比例）
   borderRadius?: number
   // 真实封面 URL，存在则覆盖在占位符之上
+  // B 站 CDN URL 会自动走本地 imageProxy（绕防盗链）；非 B 站 / 已是代理 URL 原样使用
   coverUrl?: string
 }
 
@@ -86,6 +88,38 @@ const firstChar = computed(() => {
 })
 
 const radius = computed(() => props.borderRadius ?? props.size * 0.22)
+
+// B 站 CDN 封面统一走 imageProxy：异步把 coverUrl 解析为代理 URL
+// - 传入原始 B 站 URL（i[0-2].hdslb.com/bfs/...）→ 转为 http://127.0.0.1:<port>/image?url=...
+// - 非 B 站 URL 或已是代理 URL → 原样返回
+// - 解析失败时回退原始 URL，避免封面永久空白
+const resolvedCoverUrl = ref<string | null | undefined>(undefined)
+let resolveSeq = 0
+watch(
+  () => props.coverUrl,
+  async (url) => {
+    const seq = ++resolveSeq
+    if (!url) {
+      resolvedCoverUrl.value = url
+      return
+    }
+    // 先清空，避免异步解析期间短暂显示上一张封面（解析完成后再显示新封面）
+    resolvedCoverUrl.value = undefined
+    try {
+      const resolved = await resolveBilibiliImageUrl(url)
+      // 只应用最新一次 props 变化的结果，避免快速切换时旧响应覆盖新封面
+      if (seq === resolveSeq) {
+        resolvedCoverUrl.value = resolved
+      }
+    } catch (error) {
+      console.warn('[CoverPlaceholder] 封面代理解析失败，回退原始 URL:', error)
+      if (seq === resolveSeq) {
+        resolvedCoverUrl.value = url
+      }
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -104,8 +138,8 @@ const radius = computed(() => props.borderRadius ?? props.size * 0.22)
       :style="{ fontSize: size * 0.45 + 'px' }"
     >{{ firstChar }}</span>
     <img
-      v-if="coverUrl"
-      :src="coverUrl"
+      v-if="resolvedCoverUrl"
+      :src="resolvedCoverUrl"
       class="md3-cover__img"
       alt=""
       draggable="false"

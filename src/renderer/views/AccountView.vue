@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watchEffect } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 
 import { Icons } from '../utils/icons'
-import { resolveBilibiliImageUrl } from '../utils/imageUrl'
 import IconButton from '../components/common/IconButton.vue'
 import MD3Button from '../components/common/MD3Button.vue'
 import MD3Switch from '../components/common/MD3Switch.vue'
@@ -30,13 +29,6 @@ const { data: userInfo, isLoading: isUserInfoLoading, refetch: refetchUserInfo }
 // 显示用的用户信息：优先 Query 数据，回退 store 缓存（cachedAt 旧值）
 const displayName = computed(() => userInfo.value?.name ?? auth.userInfo?.name ?? 'Bilibili 用户')
 const displayMid = computed(() => userInfo.value?.mid ?? auth.userInfo?.mid ?? '')
-// 头像 URL：B 站 CDN 图片走本地代理 server（绕过防盗链），异步转换
-const displayFace = ref('')
-watchEffect(async () => {
-  const raw = userInfo.value?.face ?? auth.userInfo?.face ?? ''
-  displayFace.value = (await resolveBilibiliImageUrl(raw, 200)) ?? ''
-})
-
 // 上报进度开关：当前为纯 UI 状态，未接 IPC
 const sendPlayHistory = ref(true)
 
@@ -144,7 +136,7 @@ async function logout() {
           :title="displayName"
           :size="72"
           :border-radius="36"
-          :cover-url="displayFace"
+          :cover-url="userInfo?.face ?? auth.userInfo?.face ?? undefined"
           class="profile-card__avatar"
         />
         <div class="profile-card__text">

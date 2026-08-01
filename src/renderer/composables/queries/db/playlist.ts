@@ -33,7 +33,7 @@ export const playlistQueryKeys = {
 // ─────────────────────────────────────────
 // 1. usePlaylists — 全部歌单列表
 // ─────────────────────────────────────────
-// staleTime 5min（queryClient 默认），与歌单列表低频变化特性匹配
+// staleTime 0：歌单列表来自本地 DB，重进页面时始终读最新数据（与 BBPlayer 一致）
 export function usePlaylists() {
   return useQuery({
     queryKey: playlistQueryKeys.lists(),
@@ -42,6 +42,7 @@ export function usePlaylists() {
       if (!res.ok) throw new Error(res.error.message)
       return res.data
     },
+    staleTime: 0,
   })
 }
 
@@ -66,8 +67,8 @@ export function usePlaylistTracks(playlistId: MaybeRefOrGetter<number>) {
     },
     // playlistId 为 0（占位）时不发请求
     enabled: () => idRef.value > 0,
-    // 切走再切回时保留缓存 10 分钟，避免重新拉取
-    staleTime: 1000 * 60 * 10,
+    // staleTime 0：曲目列表来自本地 DB，重进歌单页时始终读最新数据（与 BBPlayer 一致）
+    staleTime: 0,
   })
 }
 

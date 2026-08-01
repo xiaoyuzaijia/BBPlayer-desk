@@ -14,7 +14,7 @@
 // 远端曲目点击播放：
 // - BilibiliFavoriteMedia 不能直接当 Track 用（缺 id/uniqueKey）
 // - 点击 → 调 bilibili.addTrackByBvid 入库得 Track → playback.play(track)
-import { computed, nextTick, onUnmounted, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { Icons } from '../../utils/icons'
@@ -27,7 +27,6 @@ import {
   useSyncProgress,
 } from '../../composables/mutations/db/playlist'
 import { usePlaybackStore } from '../../stores/playback'
-import { resolveBilibiliImageUrl } from '../../utils/imageUrl'
 import { formatTime } from '../../utils/format'
 import type { BilibiliFavoriteMedia } from '../../types/bilibili'
 import type { Track } from '../../types/track'
@@ -92,37 +91,6 @@ const mediaList = computed<BilibiliFavoriteMedia[]>(() =>
     ? infiniteData.value.pages.flatMap((p) => p.medias ?? [])
     : [],
 )
-
-// 收藏夹封面代理 URL（B 站 CDN 防盗链）
-const folderCoverUrl = ref<string | null>(null)
-watchEffect(async () => {
-  const cover = folderInfo.value?.cover ?? null
-  folderCoverUrl.value = (await resolveBilibiliImageUrl(cover, 200)) ?? null
-})
-
-// 远端曲目封面代理（bvid → resolved URL）
-const mediaCovers = ref<Map<string, string | null>>(new Map())
-watchEffect(async (onCleanup) => {
-  const medias = mediaList.value
-  if (medias.length === 0) {
-    mediaCovers.value = new Map()
-    return
-  }
-  let cancelled = false
-  onCleanup(() => {
-    cancelled = true
-  })
-  const resolved = new Map<string, string | null>()
-  await Promise.all(
-    medias.map(async (m) => {
-      const url = await resolveBilibiliImageUrl(m.cover, 48)
-      resolved.set(m.bvid, url ?? null)
-    }),
-  )
-  if (!cancelled) {
-    mediaCovers.value = resolved
-  }
-})
 
 // 正在入库的 bvid 集合（点击后立即显示 loading，避免感知延迟）
 const pendingBvids = ref<Set<string>>(new Set())
@@ -278,7 +246,7 @@ onUnmounted(() => {
           <CoverPlaceholder
             :title="folderInfo?.title ?? '收藏夹'"
             :size="120"
-            :cover-url="folderCoverUrl ?? undefined"
+            :cover-url="folderInfo?.cover ?? undefined"
             class="fav-header__cover"
           />
           <div class="fav-header__info">
@@ -405,7 +373,7 @@ onUnmounted(() => {
             <CoverPlaceholder
               :title="media.title"
               :size="48"
-              :cover-url="mediaCovers.get(media.bvid) ?? undefined"
+              :cover-url="media.cover ?? undefined"
               class="media-item__cover"
             />
             <!-- 标题 + UP 主 -->

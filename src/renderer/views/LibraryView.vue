@@ -10,7 +10,7 @@
 // - local tab 走 usePlaylists()（TanStack Query，DB 数据）
 // - favorite tab 走 useFavoritePlaylists()（TanStack Query，B 站 API）
 // - 歌单列表不放 Pinia store
-import { computed, ref, watchEffect } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { Icons } from '../utils/icons'
@@ -18,7 +18,6 @@ import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
 import { usePlaylists } from '../composables/queries/db/playlist'
 import { useFavoritePlaylists } from '../composables/queries/bilibili/favorite'
 import { useAuthStore } from '../stores/auth'
-import { resolveBilibiliImageUrl } from '../utils/imageUrl'
 import type { Playlist } from '../types/playlist'
 import type { BilibiliFavoriteFolder } from '../types/bilibili'
 
@@ -52,32 +51,6 @@ const {
   isError: isFavoritesError,
   error: favoritesError,
 } = useFavoritePlaylists()
-
-// ── 收藏夹封面代理 URL 缓存（folder.id → resolved URL） ──
-// B 站 CDN 防盗链，需走本地图片代理（resolveBilibiliImageUrl）
-// watchEffect 自动追踪 favoriteFolders 变化，onCleanup 防止竞态覆盖
-const favoriteCovers = ref<Map<number, string | null>>(new Map())
-watchEffect(async (onCleanup) => {
-  const folders = favoriteFolders.value
-  if (!folders || folders.length === 0) {
-    favoriteCovers.value = new Map()
-    return
-  }
-  let cancelled = false
-  onCleanup(() => {
-    cancelled = true
-  })
-  const resolved = new Map<number, string | null>()
-  await Promise.all(
-    folders.map(async (f) => {
-      const url = await resolveBilibiliImageUrl(f.cover, 96)
-      resolved.set(f.id, url ?? null)
-    }),
-  )
-  if (!cancelled) {
-    favoriteCovers.value = resolved
-  }
-})
 
 // local tab 列表（所有歌单，含同步型，不再按 type 过滤）
 const localList = computed<Playlist[]>(() => playlists.value ?? [])
@@ -260,7 +233,7 @@ function goToFavoritePlaylist(folder: BilibiliFavoriteFolder) {
           <CoverPlaceholder
             :title="folder.title"
             :size="48"
-            :cover-url="favoriteCovers.get(folder.id) ?? undefined"
+            :cover-url="folder.cover ?? undefined"
             class="list-item__cover"
           />
           <div class="list-item__text">

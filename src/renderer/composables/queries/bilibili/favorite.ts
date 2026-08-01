@@ -36,7 +36,8 @@ export const bilibiliFavoriteQueryKeys = {
 // ─────────────────────────────────────────
 // 1. useFavoritePlaylists — 本人所有收藏夹列表
 // ─────────────────────────────────────────
-// staleTime 5min（queryClient 默认）
+// staleTime 0 + refetchOnWindowFocus：
+// B 站收藏夹列表是远端数据，重进页面/切回窗口时始终重新拉取（B 站端新增收藏立即可见）
 // 过滤 [mp] 开头的分 P 收藏夹（与 BBPlayer 一致）
 export function useFavoritePlaylists() {
   const auth = useAuthStore()
@@ -49,6 +50,8 @@ export function useFavoritePlaylists() {
       return res.data.filter((f) => !f.title.startsWith('[mp]'))
     },
     enabled: () => auth.isLoggedIn, // 未登录不发请求
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -58,7 +61,7 @@ export function useFavoritePlaylists() {
 // 与 BBPlayer useInfiniteFavoriteList 对齐：
 // - initialPageParam: 1（pn 从 1 开始）
 // - getNextPageParam: lastPage.has_more ? lastPageParam + 1 : undefined
-// - staleTime: 5 分钟
+// - staleTime: 0 + refetchOnWindowFocus（重进页面/切回窗口时始终重新拉取）
 // - ps=40（B 站 API 硬编码，主进程 api.ts 固定）
 //
 // favoriteId 可传 ref / getter / number：变化时 queryKey 自动重算并重新查询
@@ -85,6 +88,7 @@ export function useFavoriteListContents(
       lastPage.has_more ? lastPageParam + 1 : undefined,
     // favoriteId 为 0（占位）时不发请求
     enabled: () => idRef.value > 0,
-    staleTime: 1000 * 60 * 5, // 5 分钟
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 }
