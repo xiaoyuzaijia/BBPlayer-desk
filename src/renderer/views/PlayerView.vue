@@ -154,6 +154,7 @@ watch(queueOpen, (open) => {
               :title="currentTrack.title"
               :size="300"
               :cover-url="currentTrack.coverUrl ?? undefined"
+              high-res
             />
           </div>
           <!-- 曲目信息：与封面同宽对齐 -->

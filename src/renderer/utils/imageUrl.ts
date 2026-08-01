@@ -35,13 +35,18 @@ async function getProxyPort(): Promise<number> {
  */
 export async function resolveBilibiliImageUrl(
   url: string | null | undefined,
-  _maxSize = 200,
+  maxSize?: number,
 ): Promise<string | null | undefined> {
   if (!url) return url
   const secureUrl = url.startsWith('http:')
     ? url.replace('http:', 'https:')
     : url
   if (!BILIBILI_IMAGE_CDN.test(secureUrl)) return secureUrl
+  // 不给 size 时保持原始 URL，CDN 返回原始大图
+  // 给 size 时追加 @<size>w_<size>h 参数让 CDN 返回合适尺寸的缩略图，避免浏览器硬缩放产生锯齿
+  const sizedUrl = maxSize !== undefined && !secureUrl.includes('@')
+    ? `${secureUrl}@${maxSize}w_${maxSize}h`
+    : secureUrl
   const port = await getProxyPort()
-  return `http://127.0.0.1:${port}/image?url=${encodeURIComponent(secureUrl)}`
+  return `http://127.0.0.1:${port}/image?url=${encodeURIComponent(sizedUrl)}`
 }

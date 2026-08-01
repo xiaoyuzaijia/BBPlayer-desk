@@ -15,6 +15,8 @@ interface Props {
   // 真实封面 URL，存在则覆盖在占位符之上
   // B 站 CDN URL 会自动走本地 imageProxy（绕防盗链）；非 B 站 / 已是代理 URL 原样使用
   coverUrl?: string
+  // 是否使用高清图片（true 时请求原始大图，不追加 CDN 尺寸参数）
+  highRes?: boolean
 }
 
 const props = defineProps<Props>()
@@ -106,7 +108,10 @@ watch(
     // 先清空，避免异步解析期间短暂显示上一张封面（解析完成后再显示新封面）
     resolvedCoverUrl.value = undefined
     try {
-      const resolved = await resolveBilibiliImageUrl(url)
+      const resolved = await resolveBilibiliImageUrl(
+        url,
+        props.highRes ? undefined : props.size * 4,
+      )
       // 只应用最新一次 props 变化的结果，避免快速切换时旧响应覆盖新封面
       if (seq === resolveSeq) {
         resolvedCoverUrl.value = resolved
