@@ -2,7 +2,7 @@
 // 单表 CRUD：tracks 表 + bilibiliMetadata / localMetadata 分表
 // uniqueKey 全局去重；findOrCreateManyTracks 供 sync 批量预查
 // 去掉 Sentry / getPlayCountHistoryPaginated / getTotalPlaybackDuration /
-// getMostPlayedTracksInLastDays（这些走 historyService 或后续阶段补齐）
+// getMostPlayedTracksInLastDays（统计类功能后续阶段补齐）
 //
 // 重要：better-sqlite3 事务是同步的，事务回调内不能 await
 // 因此提供 *Sync 变体方法（返回 Result 而非 ResultAsync），供 facade 在事务内调用

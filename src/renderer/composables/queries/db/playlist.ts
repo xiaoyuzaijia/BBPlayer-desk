@@ -48,8 +48,8 @@ export function usePlaylists() {
 // ─────────────────────────────────────────
 // 2. usePlaylistTracks — 单个歌单的曲目列表
 // ─────────────────────────────────────────
-// 阶段 C 暂用一次性获取全量（tracks endpoint），不做游标分页
-// 计划 §10 后续：大歌单（>500 首）改用 getTracksPaginated 游标分页
+// 当前一次性获取全量（tracks endpoint），不做游标分页
+// 后续：大歌单（>500 首）可改用 getTracksPaginated 游标分页
 //
 // playlistId 可传 ref / getter / number：变化时 queryKey 自动重算并重新查询
 export function usePlaylistTracks(playlistId: MaybeRefOrGetter<number>) {

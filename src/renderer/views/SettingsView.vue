@@ -8,7 +8,7 @@ import { Icons } from '../utils/icons'
 import MD3Slider from '../components/common/MD3Slider.vue'
 
 // 账号分组：单行入口跳转到 account 路由
-// description 占位文案，后续接 auth store 后改为动态「昵称 (uidxxx)」或登录提示
+// description 为静态占位文案（昵称/登录提示在账号页展示）
 const accountDesc = '扫码、手机号或 Cookie 登录'
 
 const theme = useThemeStore()

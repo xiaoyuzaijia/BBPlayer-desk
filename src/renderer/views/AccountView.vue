@@ -37,7 +37,7 @@ watchEffect(async () => {
   displayFace.value = (await resolveBilibiliImageUrl(raw, 200)) ?? ''
 })
 
-// 上报进度开关：本阶段纯 UI，不接 IPC
+// 上报进度开关：当前为纯 UI 状态，未接 IPC
 const sendPlayHistory = ref(true)
 
 // ── 扫码登录面板显隐（面板内部自管状态机 + 订阅）──
@@ -167,7 +167,7 @@ async function logout() {
       <!-- 设置区 -->
       <section class="group">
         <div class="group__list">
-          <!-- 上报观看进度：本阶段纯 UI -->
+          <!-- 上报观看进度：当前为纯 UI 状态 -->
           <div class="row">
             <div class="row__left">
               <Icon

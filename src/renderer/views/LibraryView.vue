@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // 音乐库视图：4 tab 结构（对齐 BBPlayer）
 //
-// 阶段 C 实现：
+// 当前实现：
 // - local tab：DB 所有歌单（含同步型 favorite/collection/multi_page）
 // - favorite tab：B 站 API 收藏夹列表（未同步的也显示）
-// - collection / multiPage tab：阶段 D 实现，当前占位空状态
+// - collection / multiPage tab：占位空状态（未实现）
 //
 // 数据源约定（AGENTS.md）：
 // - local tab 走 usePlaylists()（TanStack Query，DB 数据）
@@ -26,7 +26,7 @@ const router = useRouter()
 const auth = useAuthStore()
 
 // ── Tab 定义 ──
-// local + favorite 阶段 C 实现，collection + multiPage 阶段 D
+// local + favorite 已实现，collection + multiPage 为占位
 const tabs = [
   { key: 'local', label: '播放列表' },
   { key: 'favorite', label: '收藏夹' },
@@ -268,7 +268,7 @@ function goToFavoritePlaylist(folder: BilibiliFavoriteFolder) {
               {{ folder.title }}
             </div>
             <div class="list-item__subtitle">
-              <!-- 列表项不查同步状态，避免 N+1（计划 §C.4） -->
+              <!-- 列表项不查同步状态，避免 N+1 -->
               <span>{{ folder.media_count }} 首</span>
             </div>
           </div>
@@ -298,7 +298,7 @@ function goToFavoritePlaylist(folder: BilibiliFavoriteFolder) {
       </div>
     </template>
 
-    <!-- ── collection / multiPage tab：阶段 D 实现 ── -->
+    <!-- ── collection / multiPage tab：占位空状态 ── -->
     <template v-else>
       <div class="empty">
         <Icon

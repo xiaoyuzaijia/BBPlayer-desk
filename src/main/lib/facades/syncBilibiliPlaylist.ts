@@ -527,7 +527,7 @@ export class SyncBilibiliPlaylistFacade {
         taskId,
       })
 
-      // 删除被隐藏视频后的所有 bvid（在元数据请求完成后处理）
+      // 保存全部 bvid 集合（后续剔除被隐藏的视频后用于全量重排）
       const afterRemovedHiddenBvidsAllBvids = new Set<string>(
         bilibiliFavoriteListAllContents.map((item) => item.bvid),
       )

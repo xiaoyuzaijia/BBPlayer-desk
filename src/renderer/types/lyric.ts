@@ -15,8 +15,8 @@ export type { LyricLine, LyricSpan, SplLyricData } from '../utils/splash/src/typ
  * - 去掉 `manualSkip`（Q8 决策不做跳过标记）
  * - 去掉 `misc.userOffset`（Q5 决策不做偏移量）
  *
- * 保留 `tlyric` / `romalrc` 字段：API 客户端层 1:1 复刻 BBPlayer，
- * QQ 音乐会返回 trans（翻译），保留字段以便后续灵活启用。
+ * 保留 `tlyric` / `romalrc` 字段：QQ 音乐返回的 trans 已用于解析合并，
+ * romalrc 各源均不返回，仅与 BBPlayer 对齐保留。
  */
 export interface LyricFileData {
 	/** 曲目唯一 ID（track.uniqueKey） */

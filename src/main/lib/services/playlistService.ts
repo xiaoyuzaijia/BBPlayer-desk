@@ -164,7 +164,8 @@ export class PlaylistService {
 
   /**
    * 批量添加 tracks 到本地播放列表
-   * 新 track 总是追加到末尾（sortKey 最大值，generateKeyBetween(prevKey, null)）
+   * 新 track 获得比当前最大 sortKey 更大的 key（generateKeyBetween(prevKey, null)），
+   * 按 DESC 排序时排在列表最前
    */
   public addManyTracksToLocalPlaylist(
     playlistId: number,
@@ -200,7 +201,7 @@ export class PlaylistService {
             .all()
           let prevKey: string | null = maxKeyResult[0].maxKey ?? null
 
-          // 每条用 generateKeyBetween(prevKey, null) 追加到末端
+          // 每条用 generateKeyBetween(prevKey, null) 生成更大的 key（DESC 排序下排在最前）
           const values = trackIds.map((tid) => {
             const sortKey = generateKeyBetween(prevKey, null)
             prevKey = sortKey

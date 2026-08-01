@@ -1,5 +1,5 @@
 // 主进程入口
-// 启动流程：appState.load() → initDb() → startImageProxy() → startStreamProxy() → initPlaybackFacade() → initLyricFacade() → createWindow() → registerAllIpc()
+// 启动流程：appState.load() → initDb() → ensureDir() → startImageProxy() → startStreamProxy() → initPlaybackFacade() → initLyricFacade() → createWindow() → registerAllIpc()
 import { app, BrowserWindow } from 'electron'
 import { createWindow } from './window'
 import { appState } from './lib/config/store'

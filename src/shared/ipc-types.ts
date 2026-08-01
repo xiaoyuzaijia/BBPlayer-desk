@@ -286,7 +286,7 @@ export interface BilibiliFavoriteFolder {
   cover: string | null
   upper: { mid: number; name: string; face: string | null }
   media_count: number // 曲目数
-  fav_time: number // 创建时间（ms epoch）
+  fav_time: number // 创建时间（B 站 API 秒级时间戳，原样透传）
   intro: string | null
 }
 

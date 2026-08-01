@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 本地歌单详情视图（阶段 D 从 PlaylistView 拆出）
+// 本地歌单详情视图（从 PlaylistView 拆出）
 //
 // 职责：渲染本地歌单详情（包括 type=local 和同步型 favorite/collection/multi_page）
 // 数据源：

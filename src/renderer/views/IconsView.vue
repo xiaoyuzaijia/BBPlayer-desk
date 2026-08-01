@@ -2,10 +2,10 @@
 import { Icon } from '@iconify/vue'
 import { Icons } from '../utils/icons'
 
-// 分组顺序：与 icons.ts 注释顺序一致
+// 分组顺序：按 icons.ts 注释中的分组整理（账号组图标并入设置组）
 const groupOrder = ['导航', '播放控制', '操作', '内容', '设置'] as const
 
-// 每个 key 归属哪个分组（与 icons.ts 注释一一对应）
+// 每个 key 归属哪个分组（账号组图标归入设置组展示）
 const keyToGroup: Record<string, (typeof groupOrder)[number]> = {
   // 导航
   home: '导航', library: '导航', settings: '导航',

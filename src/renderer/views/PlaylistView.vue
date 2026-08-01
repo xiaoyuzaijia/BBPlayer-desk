@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 歌单详情页：路由分发器（阶段 D 拆分）
+// 歌单详情页：路由分发器
 // 按 route.name 渲染对应子组件：
 // - playlist-local:    LocalPlaylistView（本地歌单 + 同步型歌单）
 // - playlist-favorite: FavoritePlaylistView（B 站收藏夹远端视图）

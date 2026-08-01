@@ -1,6 +1,7 @@
 // ESLint 9 flat config
 // 组合：@eslint/js（JS 基础）+ typescript-eslint（TS 规则）+ eslint-plugin-vue（Vue 规则）
-// 规则策略：用 vue3-recommended + ts strict，关闭 tsc 的 noUnusedLocals 改由 ESLint 管
+// 规则策略：用 vue3-recommended + ts strict；未使用变量检查由 ESLint 管
+// （tsconfig.web 已关闭 tsc 内置检查，tsconfig.node 仍保留 tsc 检查）
 // 检查范围：仅 src/ 下的 .ts/.vue 文件
 import js from '@eslint/js'
 import tseslint from 'typescript-eslint'

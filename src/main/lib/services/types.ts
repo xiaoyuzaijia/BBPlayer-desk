@@ -1,7 +1,7 @@
 // Service 层 payload 类型与共享业务模型
 // 复刻 BBPlayer apps/mobile/src/types/services/{track,artist,playlist}.ts
 // 以及 apps/mobile/src/types/core/media.ts 中 service 层需要用到的部分
-// 注意：与渲染进程 src/renderer/types/* 不同步，本项目 Stage D 才统一
+// 注意：与 shared/ipc-types.ts 的 IPC 类型相互独立（service 层用 Date，IPC 边界统一转 number）
 
 // ##################################
 // Artist

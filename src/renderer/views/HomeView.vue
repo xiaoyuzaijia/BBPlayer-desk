@@ -20,7 +20,7 @@ watchEffect(async () => {
   avatarFace.value = (await resolveBilibiliImageUrl(raw, 96)) ?? ''
 })
 
-// 顶部搜索框 v-model（步骤 9：把静态 input 升级为受控输入）
+// 顶部搜索框 v-model（受控输入）
 const searchQuery = ref('')
 
 // 时段问候：根据当前小时返回 "早上好 / 下午好 / 晚上好"
@@ -34,7 +34,7 @@ const greeting = computed(() => {
   return '晚上好，今天辛苦了'
 })
 
-// 快捷卡片：每张配 48×48 圆形图标容器（primary-container 背景）
+// 快捷卡片：每张配 48×48 圆形图标容器（primary 背景）
 // 对应 BBPlayer 首页的快捷入口区域
 const quickActions = [
   { title: '每日推荐', desc: '猜你喜欢', icon: Icons.fire },
@@ -44,7 +44,7 @@ const quickActions = [
 ] as const
 
 // 近期歌单：用 CoverPlaceholder 做封面
-// 假数据，coverUrl 留空走占位符（演示占位符组件，符合步骤 9 验证目标）
+// 假数据，coverUrl 留空走占位符
 const recentPlaylists = [
   { id: 'p1', title: '夜晚助眠电台', count: 32 },
   { id: 'p2', title: '日系燃向合集', count: 48 },
@@ -57,7 +57,7 @@ const recentPlaylists = [
 
 <template>
   <div class="home">
-    <!-- 顶部欢迎区：左侧 BBPlayer 标题 + 时段问候；右侧占位头像 -->
+    <!-- 顶部欢迎区：左侧 BBPlayer 标题 + 时段问候；右侧头像入口 -->
     <header class="home__header">
       <div>
         <h1 class="home__title">
@@ -116,7 +116,7 @@ const recentPlaylists = [
           :key="item.title"
           class="quick-card"
         >
-          <!-- 48×48 圆形图标容器：primary-container 背景 + on-primary-container 图标 -->
+          <!-- 48×48 圆形图标容器：primary 背景 + on-primary 图标 -->
           <div class="quick-card__icon">
             <Icon
               :icon="item.icon"

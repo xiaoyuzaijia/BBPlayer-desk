@@ -1,9 +1,9 @@
 // B 站 API 客户端类（迁移自 BBPlayer apps/mobile/src/lib/api/bilibili/api.ts）
 // 改动：
-// - 删除所有 @/types/... import，本阶段用得到的类型从 ../../types/bilibili 导入，其他方法返回类型用 unknown 占位
+// - 删除所有 @/types/... import，改为相对路径导入；未建模的返回类型用 unknown 占位
 // - 删除 ./proto/dm 弹幕 import + getSegDanmaku 方法
 // - 删除所有 garb 相关方法（依赖 garb 模块）
-// - getAudioStream 返回类型 unknown（删除 BilibiliTrack 依赖）
+// - getAudioStream 返回自定义 BilibiliAudioStream（替代 BBPlayer 的 BilibiliTrack 依赖）
 // - pollQrCodeLoginStatus: Node fetch getSetCookie 适配（headers.getSetCookie() 拿全所有 Set-Cookie）
 // - getSearchSuggestions: useAppStore.getState().bilibiliCookie?.mid → appState.bilibiliCookie?.DedeUserID
 // - import 路径相对化
@@ -40,9 +40,9 @@ const PASSPORT_UA =
  * B 站音频流信息（getAudioStream 返回类型）
  * - url: B 站 CDN 直链（已含签名）
  * - quality: 音质 id（30216=64k / 30232=128k / 30280=192k / 30250=hi-res / 30251=dolby）
- * - getTime: 主进程获取到的时间戳 (ms)，PlaybackFacade 按 getTime + 2h 计算 expire
+ * - getTime: 获取时刻 + 60s 提前量（与 BBPlayer 一致），PlaybackFacade 按 getTime + 2h 计算 streamExpiresAt
  * - type: 'dash'（独立音轨）或 'mp4'（老视频回退）
- * - volume: 音量归一化参数（透传，本阶段不消费）
+ * - volume: 音量归一化参数（透传，当前未消费）
  */
 export interface BilibiliAudioStream {
   url: string
@@ -319,7 +319,7 @@ export class BilibiliApi {
    * 获取视频音频流信息
    * 优先级（在 dolby 和 hi-res 都开启的情况下）：dolby > hi-res > normal
    *
-   * 返回的 getTime 字段是"获取时间"（用于 expire 计算），并非过期时间
+   * 返回的 getTime 字段是"获取时刻 + 60s 提前量"（用于 expire 计算），并非过期时间
    * PlaybackFacade 按 getTime + 2h 计算过期，写 streamExpiresAt
    */
   getAudioStream(params: {

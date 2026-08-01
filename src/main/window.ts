@@ -1,5 +1,4 @@
 // BrowserWindow 创建与管理
-// 参见 docs/plan/后端计划.md 第 4.2 节
 import { BrowserWindow, shell } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -22,7 +21,7 @@ export function createWindow(): BrowserWindow {
     webPreferences: {
       // preload 在 out/preload/index.js，从 out/main/ 上溯一级
       preload: join(__dirname, '..', 'preload', 'index.js'),
-      sandbox: false, // 关闭 sandbox 以便 preload 后续使用 Node 集成
+      sandbox: false, // preload 以完整 Node 环境加载 electron-vite 打包产物（contextIsolation 仍开启，渲染进程不直连 Node）
       contextIsolation: true, // 必须开，contextBridge 才能工作
       nodeIntegration: false, // 渲染进程不直接用 Node
     },

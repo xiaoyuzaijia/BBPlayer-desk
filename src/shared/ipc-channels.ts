@@ -42,7 +42,7 @@ export const HISTORY_CHANNELS = {
 export const BILIBILI_CHANNELS = {
   getFavoritePlaylists: 'bilibili:getFavoritePlaylists',
   getFavoriteListContents: 'bilibili:getFavoriteListContents',
-  addTrackByBvid: 'bilibili:addTrackByBvid', // 阶段 D 用，远端点击播放
+  addTrackByBvid: 'bilibili:addTrackByBvid', // 远端收藏夹点击播放时按 bvid 入库
 } as const
 
 export const LYRIC_CHANNELS = {

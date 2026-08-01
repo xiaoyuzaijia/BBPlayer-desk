@@ -32,7 +32,7 @@ export const lyricQueryKeys = {
 // trackId 可传 ref / getter / number：变化时 queryKey 自动重算并重新查询
 //
 // staleTime 0：歌词文件可能被外部修改（手动删除/编辑），切歌时始终重新拉取
-// 但因 queryKey 按 trackId 区分，同一 track 内不会重复拉取（keepPreviousData 默认行为）
+// 但因 queryKey 按 trackId 区分，同一 track 内不会重复拉取（placeholderData 保留旧数据防闪烁）
 //
 // 注意：返回的 LyricFileData.lrc / tlyric / romalrc 是 SPL 字符串，
 //       渲染进程需调 splash.parseAndMergeLyrics 解析为 LyricLine[]

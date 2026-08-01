@@ -102,7 +102,7 @@ class ApiClient {
         )
       })
       .andThen((data) => {
-        // 对于 wbi 接口，直接返回 data，因为未登录状态下 code 为 -101
+        // 对于 /x/web-interface/nav，未登录（code=-101）时也直接返回 data（内含 wbi_img 等匿名可用数据）
         if (endpoint === '/x/web-interface/nav') {
           return okAsync(data.data)
         }

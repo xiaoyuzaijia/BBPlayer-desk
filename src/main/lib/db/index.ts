@@ -50,7 +50,7 @@ function getDbPath(): string {
 /**
  * 获取 migrations 目录路径
  * - 开发：源码目录 src/main/lib/db/migrations
- * - 生产：打包到 out/main/migrations（需 electron-vite 配置 publicDir）
+ * - 生产：需要把 migrations 随应用打包（当前 electron.vite.config.ts 尚未配置 publicDir）
  *
  * 注意：package.json 的 "type": "module" 使主进程输出为 ESM，
  * ESM 中 __dirname 未定义，需用 import.meta.url 推导（见文件顶部）。
@@ -59,7 +59,7 @@ function getDbPath(): string {
  */
 function getMigrationsFolder(): string {
   if (app.isPackaged) {
-    // 生产：migrations 应被打包到 out/main/migrations
+    // 生产：migrations 需随应用打包到 out/main/migrations（当前构建未配置 publicDir）
     return join(__dirname, 'migrations')
   }
   // 开发：bundle 输出在 out/main/index.js，源码 migrations 在

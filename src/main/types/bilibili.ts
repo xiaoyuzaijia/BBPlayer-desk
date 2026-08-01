@@ -1,7 +1,7 @@
 // B 站 API 类型定义（精简版）
 // 从 BBPlayer apps/mobile/src/types/apis/bilibili.ts 迁移
-// 删除 garb / 弹幕 / 评论 / 音频流 等本阶段用不到的类型
-// api.ts 中其他方法返回类型暂用 unknown 占位
+// 删除 garb / 弹幕 / 评论 / 音频流 等未使用的类型
+// api.ts 中未建模的方法返回类型用 unknown 占位
 
 /**
  * 用户详细信息（getUserInfo / getOtherUserInfo 返回）
@@ -28,7 +28,7 @@ export type BilibiliQrCodeLoginStatus =
   (typeof BilibiliQrCodeLoginStatus)[keyof typeof BilibiliQrCodeLoginStatus]
 
 /**
- * 手机号登录 - 获取验证码图形验证信息（预留，本阶段不实现）
+ * 手机号登录 - 获取验证码图形验证信息（预留，当前未接 UI）
  */
 export interface BilibiliCaptchaTokenData {
   token: string

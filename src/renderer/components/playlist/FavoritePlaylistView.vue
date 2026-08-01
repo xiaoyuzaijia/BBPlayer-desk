@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// B 站收藏夹远端视图（阶段 D 新增）
+// B 站收藏夹远端视图
 //
 // 职责：渲染 B 站收藏夹详情（未同步/已同步均显示）
 // 数据源：
@@ -9,7 +9,7 @@
 // 头部按钮逻辑：
 // - 未同步：显示"同步到本地"
 // - 已同步：显示"重新同步" + 箭头按钮（跳到对应本地歌单）
-// - 同步成功后：未同步场景自动跳转到新的本地歌单页（阶段 E）
+// - 同步成功后：未同步场景自动跳转到新的本地歌单页
 //
 // 远端曲目点击播放：
 // - BilibiliFavoriteMedia 不能直接当 Track 用（缺 id/uniqueKey）
@@ -142,7 +142,7 @@ function handleSync() {
     { remoteSyncId: favoriteId.value, type: 'favorite' },
     {
       onSuccess: (newPlaylistId) => {
-        // 阶段 E：未同步时同步成功后跳转；已同步（重新同步）不跳转
+        // 未同步时同步成功后跳转；已同步（重新同步）不跳转
         if (!isSynced.value && newPlaylistId !== undefined) {
           router.push({
             name: 'playlist-local',
