@@ -1,5 +1,5 @@
 // LyricFacade
-// 跨资源编排：trackService + bilibiliApi + (qqMusicApi | kugouApi) + lyricService
+// 跨资源编排：trackService + bilibiliApi + (neteaseApi | qqMusicApi | kugouApi) + lyricService
 //
 // 职责：根据 trackId 返回歌词数据（优先本地缓存，未命中则多源竞速 + B 站歌名反查）
 //
@@ -8,7 +8,8 @@
 //   优先匹配《》内的歌名，没有则用整个 music_title
 // - Q17：多源竞速用 Promise.any + AbortController（与 BBPlayer 一致）
 // - Q16：编排放本 facade，lyricService 只做文件 CRUD
-// - 不做 manualSkip / userOffset / netease / preload / 手动搜索（Q1/Q5/Q6/Q8/Q9）
+// - 不做 manualSkip / userOffset / preload / 手动搜索（Q5/Q6/Q8/Q9）
+// - auto 竞速组成：网易 + 酷狗。QQ 音乐需账号登录、端点基本不可用，移出 auto 仅手动可选
 //
 // 错误类型：FacadeError + ServiceError + DatabaseError + BilibiliApiError + ThirdPartyError + LyricNotFoundError
 // IPC 边界再转 Result
@@ -16,6 +17,7 @@ import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import { bilibiliApi } from '../api/clients/bilibili/api'
 import { kugouApi } from '../api/clients/kugou/api'
+import { neteaseApi } from '../api/clients/netease/api'
 import { qqMusicApi } from '../api/clients/qqmusic/api'
 import {
   DatabaseError,
@@ -149,11 +151,12 @@ export class LyricFacade {
 
   /**
    * 多源竞速获取最佳匹配歌词
-   * 1:1 复刻 BBPlayer LyricService.getBestMatchedLyrics（去掉 netease 分支）
+   * 1:1 复刻 BBPlayer LyricService.getBestMatchedLyrics（auto 组成调整：网易 + 酷狗）
    *
    * 策略：
-   * - auto：QQ + 酷狗并行，Promise.any 取首个成功，abort 其余
-   * - qqmusic / kugou：单源
+   * - auto：网易 + 酷狗并行，Promise.any 取首个成功，abort 其余
+   *   （QQ 音乐需账号登录、端点基本不可用，移出 auto）
+   * - netease / qqmusic / kugou：单源
    * - 全部失败 → LyricNotFoundError
    *
    * @param track 曲目（用 track.title 作 fallback keyword，track.duration*1000 作目标时长）
@@ -199,7 +202,17 @@ export class LyricFacade {
 
     const providers: Promise<LyricProviderResponseData>[] = []
 
-    if (source === 'qqmusic' || source === 'auto') {
+    if (source === 'netease' || source === 'auto') {
+      providers.push(
+        createProviderPromise(
+          (signal) =>
+            neteaseApi.searchBestMatchedLyrics(keyword, durationMs, signal),
+          'Netease',
+        ),
+      )
+    }
+
+    if (source === 'qqmusic') {
       providers.push(
         createProviderPromise(
           (signal) =>

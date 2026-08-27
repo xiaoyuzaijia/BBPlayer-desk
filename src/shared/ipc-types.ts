@@ -54,9 +54,9 @@ export type LyricErrorCode =
 
 /**
  * 歌词源（用户偏好，auto 表示多源竞速）
- * 不含 netease（Q1 决策不做网易云）
+ * auto = 网易 + 酷狗竞速；QQ 音乐因需账号登录、端点基本不可用，移出 auto 仅手动可选
  */
-export type LyricSource = 'auto' | 'qqmusic' | 'kugou'
+export type LyricSource = 'auto' | 'netease' | 'qqmusic' | 'kugou'
 
 /**
  * 歌词文件数据（跨 IPC 传输）
@@ -70,9 +70,9 @@ export interface LyricFileData {
   updateTime: number
   /** 主歌词（SPL 格式字符串） */
   lrc?: string
-  /** 翻译歌词（QQ 音乐可能返回，酷狗恒为 undefined） */
+  /** 翻译歌词（网易云/QQ 音乐可能返回，酷狗恒为 undefined） */
   tlyric?: string
-  /** 罗马音歌词（QQ/酷狗均不返回，保留字段与 BBPlayer 对齐） */
+  /** 罗马音歌词（网易云可能返回，QQ/酷狗不返回） */
   romalrc?: string
   /** 获取失败时的展示文本（多源全失败时落盘，避免反复重试） */
   errorMessage?: string

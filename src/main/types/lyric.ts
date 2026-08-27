@@ -1,12 +1,18 @@
 // 歌词相关主进程内部类型（不跨 IPC，IPC 类型在 src/shared/ipc-types.ts）
 // 1:1 复刻 BBPlayer apps/mobile/src/types/player/lyrics.ts 中的 LyricProviderResponseData / LyricSearchResult
-// 去掉 netease 分支（Q1 决策不做网易云）
 
 /**
  * 歌词搜索结果项
- * qqmusic / kugou 的 remoteId 都是 string（网易是 number，已去掉）
+ * qqmusic / kugou 的 remoteId 是 string，netease 是 number
  */
 export type LyricSearchResult = (
+	| {
+			source: 'netease'
+			duration: number // 秒
+			title: string
+			artist: string
+			remoteId: number
+	  }
 	| {
 			source: 'qqmusic'
 			duration: number // 秒
