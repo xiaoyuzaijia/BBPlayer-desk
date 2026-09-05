@@ -30,8 +30,8 @@ import type { LyricFileData } from '../services/lyricService'
 import type { LyricService } from '../services/lyricService'
 import { getLyricService, getTrackService } from '../services'
 import type { Track } from '../services/types'
-import type { LyricProviderResponseData } from '../../types/lyric'
-import type { LyricSource } from '../../../shared/ipc-types'
+import type { LyricProviderResponseData, LyricSearchResult } from '../../types/lyric'
+import type { LyricSearchSource, LyricSource } from '../../../shared/ipc-types'
 import log from '../utils/log'
 
 const logger = log.extend('Facade.Lyric')
@@ -274,6 +274,92 @@ export class LyricFacade {
     return this.lyricService
       .saveLyricFile(lyricFileData, track.uniqueKey)
       .mapErr((e) => e as LyricFacadeError)
+  }
+
+  /**
+   * 手动搜索：按关键词搜索歌词元信息（只拿搜索结果，不下载歌词内容）
+   * 对应 BBPlayer useManualSearchLyrics 各源的 queryFn
+   * @param source 歌词源（无 auto，与搜索弹窗的源按钮对应）
+   * @param keyword 搜索关键词
+   */
+  searchLyrics(
+    source: LyricSearchSource,
+    keyword: string,
+  ): ResultAsync<LyricSearchResult, LyricFacadeError> {
+    switch (source) {
+      case 'netease':
+        return neteaseApi
+          .search({ keywords: keyword, limit: 20 })
+          .mapErr((e) => e as LyricFacadeError)
+      case 'qqmusic':
+        return qqMusicApi
+          .search(keyword, 20)
+          .mapErr((e) => e as LyricFacadeError)
+      case 'kugou':
+        return kugouApi
+          .search(keyword, 20)
+          .mapErr((e) => e as LyricFacadeError)
+      default:
+        return errAsync(
+          new FacadeError(`未知的歌词搜索源: ${String(source)}`, {
+            data: { source },
+          }),
+        )
+    }
+  }
+
+  /**
+   * 手动搜索：按选中结果获取歌词并写缓存
+   * 1:1 复刻 BBPlayer LyricService.fetchLyrics（按 item.source 分发）
+   * 写缓存用 track.uniqueKey（与 getLyrics 读缓存同 key，invalidate 后自动换词）
+   *
+   * @param trackId track.id（DB 主键）
+   * @param item 搜索结果单项（含 source + remoteId）
+   */
+  fetchLyricsFromSearch(
+    trackId: number,
+    item: LyricSearchResult[number],
+  ): ResultAsync<LyricFileData, LyricFacadeError> {
+    const trackService = getTrackService()
+    return trackService.getTrackById(trackId).andThen((track) => {
+      // 按 item.source 分发下载 + 解析
+      const fetchTask = ((): ResultAsync<
+        LyricProviderResponseData,
+        LyricFacadeError
+      > => {
+        switch (item.source) {
+          case 'netease':
+            return neteaseApi
+              .getLyrics(item.remoteId)
+              .map((res) => neteaseApi.parseLyrics(res))
+              .mapErr((e) => e as LyricFacadeError)
+          case 'qqmusic':
+            return qqMusicApi
+              .getLyrics(item.remoteId)
+              .map((res) => qqMusicApi.parseLyrics(res))
+              .mapErr((e) => e as LyricFacadeError)
+          case 'kugou':
+            return kugouApi
+              .getLyrics(item.remoteId)
+              .map((content) => kugouApi.parseLyrics(content))
+              .mapErr((e) => e as LyricFacadeError)
+          default:
+            return errAsync(new FacadeError('未知的歌词源'))
+        }
+      })()
+
+      return fetchTask
+        .map((parsed) => ({
+          ...parsed,
+          id: track.uniqueKey,
+          updateTime: Date.now(),
+        }))
+        .andThen((data) =>
+          this.lyricService
+            .saveLyricFile(data, track.uniqueKey)
+            .mapErr((e) => e as LyricFacadeError),
+        )
+    })
   }
 
   /**

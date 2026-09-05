@@ -47,5 +47,7 @@ export const BILIBILI_CHANNELS = {
 
 export const LYRIC_CHANNELS = {
   getLyrics: 'lyric:getLyrics', // 按 trackId 获取歌词（缓存 + 网络竞速）
+  searchLyrics: 'lyric:searchLyrics', // 手动搜索：按关键词搜索歌词（不下载）
+  fetchLyrics: 'lyric:fetchLyrics', // 手动搜索：按选中结果获取歌词并写缓存
   clearAllLyrics: 'lyric:clearAllLyrics', // 清空所有歌词缓存
 } as const

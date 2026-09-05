@@ -59,6 +59,42 @@ export type LyricErrorCode =
 export type LyricSource = 'auto' | 'netease' | 'qqmusic' | 'kugou'
 
 /**
+ * 手动搜索的歌词源（无 auto，与搜索弹窗的源按钮一一对应）
+ */
+export type LyricSearchSource = 'netease' | 'qqmusic' | 'kugou'
+
+/**
+ * 歌词搜索结果单项（手动搜索弹窗，搜索阶段只拿元信息不下载歌词）
+ * 与主进程 types/lyric.ts 的联合类型对齐
+ * qqmusic / kugou 的 remoteId 是 string（hash），netease 是 number
+ */
+export type LyricSearchResultItem =
+  | {
+      source: 'netease'
+      duration: number // 秒
+      title: string
+      artist: string
+      remoteId: number
+    }
+  | {
+      source: 'qqmusic'
+      duration: number // 秒
+      title: string
+      artist: string
+      remoteId: string
+    }
+  | {
+      source: 'kugou'
+      duration: number // 秒
+      title: string
+      artist: string
+      remoteId: string
+    }
+
+/** 歌词搜索结果列表（手动搜索弹窗） */
+export type LyricSearchResult = LyricSearchResultItem[]
+
+/**
  * 歌词文件数据（跨 IPC 传输）
  * 与主进程 LyricFileData 字段一致，但 id 用 track.uniqueKey
  * lrc / tlyric / romalrc 是 SPL 格式字符串，渲染进程调 parseAndMergeLyrics 解析

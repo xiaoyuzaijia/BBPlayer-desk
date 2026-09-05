@@ -8,6 +8,9 @@ import { LYRIC_CHANNELS } from '../../shared/ipc-channels'
 import type {
   LyricErrorCode,
   LyricFileData,
+  LyricSearchResult,
+  LyricSearchResultItem,
+  LyricSearchSource,
   LyricSource,
   Result,
 } from '../../shared/ipc-types'
@@ -73,6 +76,58 @@ export function registerLyricIpc(): void {
     ): Promise<Result<LyricFileData, LyricErrorCode>> => {
       const facade = getLyricFacade()
       const r = await facade.getLyrics(trackId, source)
+      return r.match<
+        | { ok: true; data: LyricFileData }
+        | { ok: false; error: { code: LyricErrorCode; message: string } }
+      >(
+        (data) => ({ ok: true, data: toIpcLyricFileData(data) }),
+        (error) => ({
+          ok: false,
+          error: {
+            code: toLyricErrorCode(error),
+            message: toLyricErrorMessage(error),
+          },
+        }),
+      )
+    },
+  )
+
+  // 手动搜索：按关键词搜索歌词元信息（不下载歌词内容）
+  ipcMain.handle(
+    LYRIC_CHANNELS.searchLyrics,
+    async (
+      _e,
+      source: LyricSearchSource,
+      keyword: string,
+    ): Promise<Result<LyricSearchResult, LyricErrorCode>> => {
+      const facade = getLyricFacade()
+      const r = await facade.searchLyrics(source, keyword)
+      return r.match<
+        | { ok: true; data: LyricSearchResult }
+        | { ok: false; error: { code: LyricErrorCode; message: string } }
+      >(
+        (data) => ({ ok: true, data }),
+        (error) => ({
+          ok: false,
+          error: {
+            code: toLyricErrorCode(error),
+            message: toLyricErrorMessage(error),
+          },
+        }),
+      )
+    },
+  )
+
+  // 手动搜索：按选中结果获取歌词并写缓存
+  ipcMain.handle(
+    LYRIC_CHANNELS.fetchLyrics,
+    async (
+      _e,
+      trackId: number,
+      item: LyricSearchResultItem,
+    ): Promise<Result<LyricFileData, LyricErrorCode>> => {
+      const facade = getLyricFacade()
+      const r = await facade.fetchLyricsFromSearch(trackId, item)
       return r.match<
         | { ok: true; data: LyricFileData }
         | { ok: false; error: { code: LyricErrorCode; message: string } }

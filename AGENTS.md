@@ -125,7 +125,7 @@ MD3 令牌定义在 [renderer/style.css](src/renderer/style.css)（CSS 自定义
 
 - 路由链接用 `name` 不用 `path`；`() => import(...)` 懒加载
 - 歌单详情按类型分 3 路由：`playlist-local/:id`（local + synced）、`playlist-favorite/:id`（B 站收藏夹）、`playlist-toview`（全局唯一，无 id）
-- 组件目录：`common/`（IconButton / CoverPlaceholder / MD3Slider / MD3Switch / MD3Button）、`layout/`（Sidebar / NowPlayingBar / QrLoginPanel）、`player/`（PlayerProgressBar / QueueDrawer）、`playlist/`（PlaylistHeader / TrackList / TrackListItem）、`lyric/`（LyricView / LyricLineItem）
+- 组件目录：`common/`（IconButton / CoverPlaceholder / MD3Slider / MD3Switch / MD3Button）、`layout/`（Sidebar / NowPlayingBar）、`player/`（PlayerProgressBar / QueueDrawer）、`playlist/`（PlaylistHeader / TrackList / TrackListItem）、`lyric/`（LyricView / LyricLineItem）、`modals/`（ModalHost / QrLoginModal / ManualSearchLyricsModal，注册表 registry.ts）
 
 ## 已知陷阱
 

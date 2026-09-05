@@ -23,6 +23,9 @@ import type {
   HistoryErrorCode,
   LyricErrorCode,
   LyricFileData,
+  LyricSearchResult,
+  LyricSearchResultItem,
+  LyricSearchSource,
   LyricSource,
   PlaybackErrorCode,
   PlayRecordPayload,
@@ -269,6 +272,28 @@ const api = {
       ipcRenderer.invoke(LYRIC_CHANNELS.clearAllLyrics) as Promise<
         Result<true, LyricErrorCode>
       >,
+    /**
+     * 手动搜索：按关键词搜索歌词元信息（不下载歌词内容）
+     * @param source 歌词源（无 auto，与搜索弹窗的源按钮对应）
+     * @param keyword 搜索关键词
+     */
+    searchLyrics: (source: LyricSearchSource, keyword: string) =>
+      ipcRenderer.invoke(
+        LYRIC_CHANNELS.searchLyrics,
+        source,
+        keyword,
+      ) as Promise<Result<LyricSearchResult, LyricErrorCode>>,
+    /**
+     * 手动搜索：按选中结果获取歌词并写缓存（写完由渲染端失效歌词 query）
+     * @param trackId track.id（DB 主键）
+     * @param item 搜索结果单项（含 source + remoteId）
+     */
+    fetchLyrics: (trackId: number, item: LyricSearchResultItem) =>
+      ipcRenderer.invoke(
+        LYRIC_CHANNELS.fetchLyrics,
+        trackId,
+        item,
+      ) as Promise<Result<LyricFileData, LyricErrorCode>>,
   },
 }
 

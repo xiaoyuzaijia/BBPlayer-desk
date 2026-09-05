@@ -13,6 +13,8 @@ import PlayerProgressBar from '../components/player/PlayerProgressBar.vue'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
 import QueueDrawer from '../components/player/QueueDrawer.vue'
 import LyricView from '../components/lyric/LyricView.vue'
+import MD3Menu from '../components/common/MD3Menu.vue'
+import { useLyricMenu } from '../composables/useLyricMenu'
 // Lottie 帧定义：帧 0 = pause（双竖线），帧 7 = play（三角形）
 // 初始化用 goToAndStop 直接定位，切换用 playSegments 播过渡
 import playPauseJson from '../assets/lottie/play-pause.json'
@@ -117,6 +119,12 @@ watch(queueOpen, (open) => {
     consoleWidth.value = consoleEl.value.offsetWidth
   }
 })
+
+// 歌词页 more 菜单：开关状态 + trigger 元素引用（与队列抽屉同一模式）
+const moreOpen = ref(false)
+const moreTriggerEl = ref<HTMLElement | null>(null)
+// 菜单项由数据层 composable 生成（对应 BBPlayer 的 usePlaylistMenu）
+const lyricMenuItems = useLyricMenu()
 </script>
 
 <template>
@@ -135,11 +143,26 @@ watch(queueOpen, (open) => {
         <span class="player__status">正在播放</span>
         <span class="player__track-title">{{ currentTrack.title }}</span>
       </div>
-      <IconButton
-        :icon="Icons.more"
-        :size="24"
-      />
+      <div
+        ref="moreTriggerEl"
+        class="player__more-trigger"
+      >
+        <IconButton
+          :icon="Icons.more"
+          :size="24"
+          :selected="moreOpen"
+          @click="moreOpen = !moreOpen"
+        />
+      </div>
     </header>
+
+    <!-- 歌词页 more 菜单：内部 Teleport 到 body，此处位置随意 -->
+    <MD3Menu
+      v-if="moreOpen"
+      :trigger="moreTriggerEl"
+      :items="lyricMenuItems"
+      @close="moreOpen = false"
+    />
 
     <!-- ── 主体：左侧控制台 / 右侧歌词占位 ── -->
     <div class="player__body">
@@ -327,6 +350,10 @@ watch(queueOpen, (open) => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+/* more 菜单 trigger 容器：组件 ref 拿不到根 DOM，与队列 trigger 一致包一层 */
+.player__more-trigger {
+  display: inline-flex;
 }
 
 /* ── 主体：左右布局 ── */

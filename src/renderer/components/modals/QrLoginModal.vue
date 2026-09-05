@@ -1,39 +1,24 @@
 <script setup lang="ts">
-import { onUnmounted, ref, watch } from 'vue'
+// Bilibili 扫码登录弹窗（参考 BBPlayer QrLoginPanel）
+// 自封装登录状态机（generating/polling/scanned/success/expired/error）+ 主进程订阅 + 二维码图生成
+// 生命周期即弹窗生命周期：挂载即启动（申请二维码 + 订阅推送），卸载即取消轮询
+// （Esc / 遮罩点击 / × 按钮 / 登录成功都走 modalStore.close）
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import QRCode from 'qrcode'
 
+import type { QrStatus } from '../../../shared/ipc-types'
+import { useModalStore } from '../../stores/modal'
 import { Icons } from '../../utils/icons'
 import MD3Button from '../common/MD3Button.vue'
-import type { QrStatus } from '../../../shared/ipc-types'
 
-// Bilibili 扫码登录面板
-// 封装：状态机（generating/polling/scanned/success/expired/error）+ 主进程订阅 + 二维码图生成
-// 对外：v-model:visible 控制显隐，@success 通知登录成功
-// visible=true 自动启动申请+轮询，visible=false 自动取消轮询
-interface Props {
-  visible: boolean
-}
-const props = defineProps<Props>()
-const emit = defineEmits<{
-  'update:visible': [boolean]
-  success: []
-}>()
+const modalStore = useModalStore()
 
 const qrStatus = ref<QrStatus>({ state: 'generating' })
 const qrDataUrl = ref('')
 let unsubQr: (() => void) | null = null
 
-// visible 切换：true → 启动，false → 取消
-watch(
-  () => props.visible,
-  (v) => {
-    if (v) start()
-    else cancel()
-  },
-)
-
-// 状态变化：polling 生成二维码图；success 延迟通知父组件
+// 状态变化：polling 生成二维码图；success 延迟 800ms 关弹窗（让用户看到成功态）
 watch(
   () => qrStatus.value,
   async (status) => {
@@ -47,8 +32,7 @@ watch(
         console.error('生成二维码失败:', e)
       }
     } else if (status.state === 'success') {
-      // 延迟 800ms 让用户看到 success 状态，再通知父组件关面板
-      setTimeout(() => emit('success'), 800)
+      setTimeout(() => modalStore.close('QrLogin'), 800)
     }
   },
 )
@@ -69,12 +53,16 @@ function cancel() {
 }
 
 function close() {
-  emit('update:visible', false)
+  modalStore.close('QrLogin')
 }
 
 function refresh() {
   void start()
 }
+
+onMounted(() => {
+  void start()
+})
 
 onUnmounted(() => {
   if (unsubQr) {
@@ -86,9 +74,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    v-if="visible"
+  <section
     class="qr-panel"
+    role="dialog"
+    aria-label="扫码登录"
   >
     <button
       type="button"
@@ -210,11 +199,11 @@ onUnmounted(() => {
         重试
       </MD3Button>
     </div>
-  </div>
+  </section>
 </template>
 
 <style scoped>
-/* ── 面板容器 ── */
+/* ── 弹窗面板 ── */
 .qr-panel {
   position: relative;
   width: 100%;

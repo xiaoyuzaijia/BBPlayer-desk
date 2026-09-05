@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import Sidebar from './components/layout/Sidebar.vue'
 import NowPlayingBar from './components/layout/NowPlayingBar.vue'
+import ModalHost from './components/modals/ModalHost.vue'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 import { useAudioEngine } from './composables/useAudioEngine'
@@ -30,5 +31,7 @@ const showNowPlayingBar = computed(() => route.name !== 'player')
       <RouterView />
     </main>
     <NowPlayingBar v-if="showNowPlayingBar" />
+    <!-- 全局弹窗宿主：渲染 modal store 的弹窗栈 -->
+    <ModalHost />
   </div>
 </template>

@@ -9,7 +9,7 @@ import IconButton from '../components/common/IconButton.vue'
 import MD3Button from '../components/common/MD3Button.vue'
 import MD3Switch from '../components/common/MD3Switch.vue'
 import CoverPlaceholder from '../components/common/CoverPlaceholder.vue'
-import QrLoginPanel from '../components/layout/QrLoginPanel.vue'
+import { useModalStore } from '../stores/modal'
 import { useAuthStore } from '../stores/auth'
 import { useBilibiliUserInfo } from '../composables/queries/bilibili/user'
 
@@ -32,16 +32,11 @@ const displayMid = computed(() => userInfo.value?.mid ?? auth.userInfo?.mid ?? '
 // 上报进度开关：当前为纯 UI 状态，未接 IPC
 const sendPlayHistory = ref(true)
 
-// ── 扫码登录面板显隐（面板内部自管状态机 + 订阅）──
-const showQrPanel = ref(false)
+// ── 扫码登录：走全局弹窗体系（悬浮在账号页之上，页面内容不再被面板替换）──
+const modalStore = useModalStore()
 
 function startQrLogin() {
-  showQrPanel.value = true
-}
-
-function onQrSuccess() {
-  // 登录成功：关面板；auth store 会通过 onStateChanged 自动更新 isLoggedIn
-  showQrPanel.value = false
+  modalStore.open('QrLogin', undefined)
 }
 
 onMounted(() => {
@@ -70,15 +65,9 @@ async function logout() {
       </h2>
     </header>
 
-    <!-- ─────────── 扫码面板（未登录/已登录下点扫码登录都显示） ─────────── -->
-    <QrLoginPanel
-      v-model:visible="showQrPanel"
-      @success="onQrSuccess"
-    />
-
     <!-- ─────────── 未登录态（默认 hero） ─────────── -->
     <div
-      v-if="!showQrPanel && !isLoggedIn"
+      v-if="!isLoggedIn"
       class="account__hero"
     >
       <div class="account__default-avatar">
@@ -127,7 +116,7 @@ async function logout() {
 
     <!-- ─────────── 已登录态 ─────────── -->
     <div
-      v-else-if="!showQrPanel"
+      v-else
       class="account__logged"
     >
       <!-- 用户信息卡片 -->
