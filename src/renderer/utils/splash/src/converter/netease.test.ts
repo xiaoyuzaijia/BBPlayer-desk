@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 import { parseYrc, formatSplTime } from './netease'
+import { parseSpl } from '../parser'
 
 describe('网易云 YRC 转换器', () => {
 	it('应该正确格式化时间', () => {
@@ -74,6 +75,31 @@ describe('网易云 YRC 转换器', () => {
 		expect(lines).toContain('[00:01.000]作曲: DECO*27')
 		expect(lines).toContain('[00:20.848]特別な君と 特別な日を')
 		expect(lines).toContain('[00:25.915]笑い合って バカもしたいな')
+	})
+
+	it('应该规范化网易云偶发的冒号百分秒 LRC（songId 3340114786，issue #316）', () => {
+		// 网易云偶尔返回 [mm:ss:xx] 三段式时间戳，SPL 只认 [mm:ss.xx]，
+		// 需在透传时规范化，否则正文行全部解析失败
+		const input = [
+			'[00:00.00]作词: 示例',
+			'[00:01.00]作曲: 示例',
+			'[00:22:25]第一段示例文本',
+			'[00:28:96]第二段示例文本',
+		].join('\n')
+
+		const output = parseYrc(input)
+		const lines = output.split('\n')
+
+		// 小数点格式原样保留，冒号百分秒规范化为小数点
+		expect(lines).toContain('[00:00.00]作词: 示例')
+		expect(lines).toContain('[00:01.00]作曲: 示例')
+		expect(lines).toContain('[00:22.25]第一段示例文本')
+		expect(lines).toContain('[00:28.96]第二段示例文本')
+
+		// 规范化后的输出可被 SPL 解析器正确取到行起始时间
+		const parsed = parseSpl(output)
+		expect(parsed.lines.some((line) => line.startTime === 22250)).toBe(true)
+		expect(parsed.lines.some((line) => line.startTime === 28960)).toBe(true)
 	})
 
 	it('应该正确处理过长的间奏（遵循词的持续时间）', () => {
