@@ -5,6 +5,7 @@ import { createWindow } from './window'
 import { appState } from './lib/config/store'
 import { closeDb, initDb } from './lib/db'
 import { registerAllIpc } from './ipc'
+import { PLAYBACK_CHANNELS } from '../shared/ipc-channels'
 import { bilibiliAuthFacade } from './lib/facades/bilibiliAuth'
 import { initLyricFacade } from './lib/facades/lyric'
 import { initPlaybackFacade } from './lib/facades/playback'
@@ -55,6 +56,27 @@ app.whenReady().then(async () => {
   // 兜底：窗口关闭时停止扫码轮询（防止 timer 泄漏）
   mainWindow.on('closed', () => {
     bilibiliAuthFacade.cancelQrLogin()
+  })
+
+  // ── 退出前保存播放会话（仅退出时存）──
+  // 拦截 close：先请求渲染进程回传队列快照（playback:saveSessionRequest 推送 →
+  // 渲染进程经 playback:saveSession invoke 回传 → ipc/playback.ts 写盘后 destroy 窗口）
+  // sessionSaveState 三态：none=未开始 / pending=已请求（等待回传或兜底超时）/ done=放行
+  let sessionSaveState: 'none' | 'pending' | 'done' = 'none'
+  mainWindow.on('close', (e) => {
+    if (sessionSaveState === 'done') return
+    e.preventDefault()
+    if (sessionSaveState === 'pending') return // 防重入：保存期间重复 close 只拦截
+    sessionSaveState = 'pending'
+    if (!mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send(PLAYBACK_CHANNELS.saveSessionRequest)
+    }
+    // 兜底：渲染进程崩溃/无响应时 1s 后强制退出，保证关窗不被卡死（丢本次会话）
+    setTimeout(() => {
+      sessionSaveState = 'done'
+      mainWindow.destroy() // 已被 saveSession handler 销毁时为 no-op
+      app.quit()
+    }, 1000)
   })
 
   // macOS：点击 Dock 图标时若无窗口则重建

@@ -12,7 +12,15 @@ import globals from 'globals'
 export default tseslint.config(
   // ── 全局忽略 ──
   {
-    ignores: ['dist/**', 'node_modules/**', '.trae/**', 'docs/**', 'out/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '.trae/**',
+      'docs/**',
+      'out/**',
+      // splash 歌词解析库：从参考项目 1:1 拷贝的 vendored 代码（含测试），不做 lint
+      'src/renderer/utils/splash/**',
+    ],
   },
 
   // ── JS 基础推荐规则 ──

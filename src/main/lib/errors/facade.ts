@@ -15,6 +15,7 @@ export type FacadeErrorType =
   | 'ReorderPlaylistTrackFailed'
   | 'UpdatePlaylistMetadataFailed'
   | 'PlaylistDeleteFailed'
+  | 'PersistPlaybackSessionFailed'
 
 export function createSyncTaskAlreadyRunningError(cause?: unknown): FacadeError {
   return new FacadeError('同步任务正在进行中，请稍后再试', {

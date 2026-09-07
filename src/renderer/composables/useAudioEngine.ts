@@ -71,12 +71,40 @@ export function useAudioEngine() {
           )
       }
 
-      // 切下一首（playback.next 会重置 currentTime=0 并切 currentTrack）
-      playback.next()
+      // ended 后 audio 已暂停，仅靠 store 重置 currentTime 无法触发重启
+      // （watch(isPlaying) 值未变不会触发，watch(currentTime) 只 seek 不播放），
+      // 所以重播当前曲的场景必须在 engine 层显式 play()
+      if (playback.playMode === 'one') {
+        // 单曲循环：重置进度并重播当前曲（不换曲）
+        el.currentTime = 0
+        el.play().catch((e: unknown) =>
+          console.error('[audioEngine] replay failed', e),
+        )
+      } else {
+        // 切下一首（playback.next 会重置 currentTime=0 并切 currentTrack）
+        const prevIndex = player.queueIndex
+        playback.next()
+        // 单曲队列回绕到自身（all 末尾回 0 / shuffle 随机序只剩一首）：需显式重启
+        if (player.queueIndex === prevIndex) {
+          el.currentTime = 0
+          el.play().catch((e: unknown) =>
+            console.error('[audioEngine] replay failed', e),
+          )
+        }
+      }
       // 下一个 tick 解锁，让下次 ended 能再触发
       setTimeout(() => {
         endedHandling = false
       }, 0)
+    })
+
+    el.addEventListener('loadedmetadata', () => {
+      // 会话恢复进度兜底：恢复时 currentTime 先于 src 赋值（URL 异步拉取），
+      // 若 default playback start position 未生效，metadata 加载后手动补一次 seek
+      // 正常切歌时 currentTime 已被 action 重置为 0，不会触发
+      if (!playback.isPlaying && playback.currentTime > 0.5) {
+        el.currentTime = playback.currentTime
+      }
     })
 
     el.addEventListener('error', async () => {

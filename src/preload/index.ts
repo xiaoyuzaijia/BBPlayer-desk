@@ -28,6 +28,7 @@ import type {
   LyricSearchSource,
   LyricSource,
   PlaybackErrorCode,
+  PlaybackSessionSnapshot,
   PlayRecordPayload,
   Playlist,
   PlaylistErrorCode,
@@ -35,6 +36,7 @@ import type {
   PlaylistType,
   PlaylistWithMetadata,
   QrStatus,
+  RestoredPlaybackSession,
   ReorderTrackPayload,
   Result,
   Track,
@@ -202,6 +204,33 @@ const api = {
       ipcRenderer.invoke(PLAYBACK_CHANNELS.refreshAudioUrl, trackId) as Promise<
         Result<string, PlaybackErrorCode>
       >,
+    /**
+     * 回传播放会话快照（收到 onSaveSessionRequest 推送后调用）
+     * 主进程写盘后会自行销毁窗口继续退出流程
+     */
+    saveSession: (snapshot: PlaybackSessionSnapshot) =>
+      ipcRenderer.invoke(
+        PLAYBACK_CHANNELS.saveSession,
+        snapshot,
+      ) as Promise<Result<true, PlaybackErrorCode>>,
+    /**
+     * 启动时恢复播放会话（队列 + 当前曲目 + 进度 + 偏好）
+     * 无快照 / 空队列 / 全部失效时 data 为 null
+     */
+    restoreSession: () =>
+      ipcRenderer.invoke(PLAYBACK_CHANNELS.restoreSession) as Promise<
+        Result<RestoredPlaybackSession | null, PlaybackErrorCode>
+      >,
+    /**
+     * 订阅退出前保存请求（主进程 close 拦截时推送），返回 unsubscribe 函数
+     * 收到后应立即收集快照并调 saveSession 回传
+     */
+    onSaveSessionRequest: (cb: () => void): (() => void) => {
+      const handler = (): void => cb()
+      ipcRenderer.on(PLAYBACK_CHANNELS.saveSessionRequest, handler)
+      return () =>
+        ipcRenderer.off(PLAYBACK_CHANNELS.saveSessionRequest, handler)
+    },
   },
   history: {
     /**

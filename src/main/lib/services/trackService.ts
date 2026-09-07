@@ -247,6 +247,47 @@ export class TrackService {
   }
 
   /**
+   * 批量按 ID 获取 tracks 完整信息（含 artist / metadata）
+   * 按传入 ids 顺序输出；查不到或 source/metadata 不一致的直接跳过（不报错）
+   * 供播放会话恢复使用（队列里的 track 可能已被删除）
+   */
+  public getTracksByIds(
+    ids: number[],
+  ): ResultAsync<Track[], ServiceError | DatabaseError> {
+    if (ids.length === 0) {
+      return okAsync([])
+    }
+    return ResultAsync.fromPromise(
+      Promise.resolve(
+        this.db.query.tracks
+          .findMany({
+            where: inArray(schema.tracks.id, ids),
+            with: {
+              artist: true,
+              bilibiliMetadata: true,
+              localMetadata: true,
+            },
+          })
+          .sync(),
+      ),
+      (e) =>
+        new DatabaseError('批量按 ID 查找 tracks 失败', { cause: e }),
+    ).map((dbTracks) => {
+      // 按 id 索引后按传入顺序重组（保持队列顺序）
+      const byId = new Map<number, Track | null>()
+      for (const dbTrack of dbTracks) {
+        byId.set(dbTrack.id, this.formatTrack(dbTrack))
+      }
+      const tracks: Track[] = []
+      for (const id of ids) {
+        const formatted = byId.get(id)
+        if (formatted) tracks.push(formatted)
+      }
+      return tracks
+    })
+  }
+
+  /**
    * 删除一个 track（级联删除 metadata / playlistTracks / playHistory）
    */
   public deleteTrack(

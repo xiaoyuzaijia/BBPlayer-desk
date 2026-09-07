@@ -7,6 +7,7 @@ import ModalHost from './components/modals/ModalHost.vue'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 import { useAudioEngine } from './composables/useAudioEngine'
+import { usePlaybackSession } from './composables/usePlaybackSession'
 
 // auth store 在 App 顶层初始化一次，订阅主进程登录态推送
 useAuthStore().init()
@@ -16,6 +17,9 @@ useThemeStore()
 // 必须在 App onMounted 调一次，整个应用共享一个 audio 元素
 const { ensureAudioEl } = useAudioEngine()
 onMounted(() => ensureAudioEl())
+
+// 播放会话持久化：启动时恢复上次队列/进度（不自动播放），退出前响应主进程保存请求
+usePlaybackSession()
 
 const route = useRoute()
 // 进入 PlayerView 时隐藏 NowPlayingBar（避免与播放器重复显示）

@@ -1,5 +1,6 @@
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
+import type { PlayMode } from '../../shared/ipc-types'
 import type { Track } from '../types/track'
 import { usePlayerStore } from './player'
 import { useQueueStore } from './queue'
@@ -30,7 +31,11 @@ export const usePlaybackStore = defineStore('playback', () => {
   const volume = ref(80)
 
   // ── 播放模式：all / one / shuffle 三态互斥（参考 BBPlayer playMode）──
-  const playMode = ref<'all' | 'one' | 'shuffle'>('all')
+  const playMode = ref<PlayMode>('all')
+
+  // ── shuffle 随机序：queue 索引的随机排列（参考 BBPlayer OrpheusQueueManager.shuffleIndices）──
+  // 仅 shuffle 模式下有值；序列开头固定为当前曲目，next/prev 沿序列回绕移动
+  const shuffleOrder = ref<number[]>([])
 
   // ── smoothCurrentTime 的 rAF 插值循环 ──
   // 每帧累加 deltaTime/1000（仅 isPlaying 时），由 currentTime 做偏差校正
@@ -78,8 +83,16 @@ export const usePlaybackStore = defineStore('playback', () => {
 
   // ── 派生 ──
   const currentTrack = computed<Track | null>(() => player.currentTrack)
-  const hasPrev = computed(() => player.queueIndex > 0)
-  const hasNext = computed(() => player.queueIndex < queueStore.queue.length - 1)
+  // shuffle 是无限随机循环：队列非空时永远有上/下一首
+  // all/one：首/末按钮禁用（自然播完仍会自动回绕，属既有行为）
+  const hasPrev = computed(() =>
+    playMode.value === 'shuffle' ? queueStore.queue.length > 0 : player.queueIndex > 0,
+  )
+  const hasNext = computed(() =>
+    playMode.value === 'shuffle'
+      ? queueStore.queue.length > 0
+      : player.queueIndex < queueStore.queue.length - 1,
+  )
 
   // ── 内部工具：把 queueIndex 写回 player 镜像 ──
   function syncMirror(index: number) {
@@ -87,22 +100,70 @@ export const usePlaybackStore = defineStore('playback', () => {
     player.currentTrack = queueStore.queue[index] ?? null
   }
 
+  // ── shuffle 随机序维护 ──
+
+  // 生成随机序：[0..len-1] Fisher-Yates 洗牌，当前曲目换到序列开头
+  // （BBPlayer generateShuffleIndices 语义：开启 shuffle 后从当前曲继续随机往下）
+  function generateShuffleOrder() {
+    const indices = queueStore.queue.map((_, i) => i)
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[indices[i], indices[j]] = [indices[j], indices[i]]
+    }
+    const pos = indices.indexOf(player.queueIndex)
+    if (pos > 0) {
+      ;[indices[0], indices[pos]] = [indices[pos], indices[0]]
+    }
+    shuffleOrder.value = indices
+  }
+
+  function clearShuffleOrder() {
+    shuffleOrder.value = []
+  }
+
+  // 队列移除后同步随机序：去掉被删索引，其余 > 该索引的统一前移对齐偏移
+  function removeFromShuffleOrder(removedIndex: number) {
+    shuffleOrder.value = shuffleOrder.value
+      .filter((i) => i !== removedIndex)
+      .map((i) => (i > removedIndex ? i - 1 : i))
+  }
+
+  // 沿随机序移动一步（dir=1 下一首 / -1 上一首），越界回绕，返回目标 queueIndex
+  function shuffleStep(dir: 1 | -1): number {
+    let order = shuffleOrder.value
+    let pos = order.indexOf(player.queueIndex)
+    if (pos === -1) {
+      // 当前索引不在随机序（队列被外部改动的兜底）：重新洗牌后当前曲必在序列开头
+      generateShuffleOrder()
+      order = shuffleOrder.value
+      pos = 0
+    }
+    return order[(pos + dir + order.length) % order.length]
+  }
+
   // ── 播放控制 ──
 
   // 播放指定曲目：
   // - 若已在队列中：跳到该索引
-  // - 若不在：追加到末尾并跳到末尾
+  // - 若不在：追加到末尾并跳到末尾（shuffle 下新索引排到随机序末尾，BBPlayer 行为）
   function play(track: Track) {
     const idx = queueStore.findIndex(track.id)
     const targetIndex = idx !== -1 ? idx : queueStore.append(track)
+    if (idx === -1 && playMode.value === 'shuffle') {
+      shuffleOrder.value.push(targetIndex)
+    }
     syncMirror(targetIndex)
     isPlaying.value = true
     currentTime.value = 0
   }
 
   // 播放整个歌单：替换队列，从 startIndex 开始
+  // shuffle 下队列被整体替换：重新洗牌（startIndex 提到随机序开头）
   function playAll(tracks: Track[], startIndex = 0) {
     queueStore.setQueue(tracks, startIndex)
+    if (playMode.value === 'shuffle') {
+      generateShuffleOrder()
+    }
     syncMirror(startIndex)
     isPlaying.value = true
     currentTime.value = 0
@@ -129,26 +190,40 @@ export const usePlaybackStore = defineStore('playback', () => {
     else resume()
   }
 
+  // 切下一首（手动点按钮；自然播完由 useAudioEngine 的 ended 处理）
+  // - shuffle：沿随机序前进（越尾回绕）
+  // - all/one：顺序前进，末尾回第一首（列表循环；one 的自然播完重播在 engine 层处理）
+  // 单曲队列会回绕到自身：重置进度即可（播放中 seek 自动继续，暂停则由 isPlaying 触发播放）
   function next() {
-    // 单曲循环：仅重置进度，不切歌
-    if (playMode.value === 'one') {
+    if (queueStore.queue.length === 0) return
+    const target =
+      playMode.value === 'shuffle'
+        ? shuffleStep(1)
+        : hasNext.value
+          ? player.queueIndex + 1
+          : 0
+    if (target === player.queueIndex) {
       currentTime.value = 0
+      isPlaying.value = true
       return
     }
-    if (hasNext.value) {
-      syncMirror(player.queueIndex + 1)
-    } else if (playMode.value === 'all') {
-      // 列表循环：回到第一首
-      syncMirror(0)
-    } else {
-      isPlaying.value = false
-      return
-    }
+    syncMirror(target)
     isPlaying.value = true
     currentTime.value = 0
   }
 
+  // 切上一首：shuffle 沿随机序后退（越头回绕）；all/one 顺序后退（开头不动）
   function prev() {
+    if (queueStore.queue.length === 0) return
+    if (playMode.value === 'shuffle') {
+      const target = shuffleStep(-1)
+      if (target !== player.queueIndex) {
+        syncMirror(target)
+        isPlaying.value = true
+        currentTime.value = 0
+      }
+      return
+    }
     if (hasPrev.value) {
       syncMirror(player.queueIndex - 1)
       isPlaying.value = true
@@ -175,7 +250,7 @@ export const usePlaybackStore = defineStore('playback', () => {
     volume.value = v
   }
 
-  // 从队列中移除指定索引（编排 player + queue）
+  // 从队列中移除指定索引（编排 player + queue + shuffleOrder）
   function removeFromQueue(index: number) {
     const result = queueStore.removeAt(index, player.queueIndex)
     if (result.isEmpty) {
@@ -184,7 +259,12 @@ export const usePlaybackStore = defineStore('playback', () => {
       player.queueIndex = 0
       isPlaying.value = false
       currentTime.value = 0
+      clearShuffleOrder()
       return
+    }
+    // shuffle 下同步随机序：去掉被删索引并对其后的索引前移
+    if (playMode.value === 'shuffle') {
+      removeFromShuffleOrder(index)
     }
     if (result.shouldSwitchTrack) {
       // 移除的是当前播放：切到新当前索引
@@ -198,10 +278,40 @@ export const usePlaybackStore = defineStore('playback', () => {
   }
 
   // 循环切换播放模式：all → one → shuffle → all
+  // 切到 shuffle：以当前曲为起点生成随机序；切走：清空随机序
   function cyclePlayMode() {
     if (playMode.value === 'all') playMode.value = 'one'
-    else if (playMode.value === 'one') playMode.value = 'shuffle'
-    else playMode.value = 'all'
+    else if (playMode.value === 'one') {
+      playMode.value = 'shuffle'
+      generateShuffleOrder()
+    } else {
+      playMode.value = 'all'
+      clearShuffleOrder()
+    }
+  }
+
+  // 恢复上次会话（启动时由 usePlaybackSession 调用，快照来自主进程）
+  // 恢复队列 + 当前曲目 + 进度 + 偏好，不自动播放（isPlaying=false 等用户点播放）
+  function restoreSession(
+    tracks: Track[],
+    index: number,
+    position: number,
+    mode: PlayMode,
+    vol: number,
+  ) {
+    queueStore.setQueue(tracks, index)
+    playMode.value = mode
+    if (mode === 'shuffle') {
+      // 洗牌会把当前曲（index）提到随机序开头
+      generateShuffleOrder()
+    } else {
+      clearShuffleOrder()
+    }
+    syncMirror(index)
+    isPlaying.value = false
+    currentTime.value = position
+    smoothCurrentTime.value = position
+    volume.value = vol
   }
 
   return {
@@ -230,5 +340,6 @@ export const usePlaybackStore = defineStore('playback', () => {
     setIsPlaying,
     removeFromQueue,
     cyclePlayMode,
+    restoreSession,
   }
 })

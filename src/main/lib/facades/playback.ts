@@ -11,8 +11,13 @@
 // - 错误类型用 FacadeError + BilibiliApiError + ServiceError + DatabaseError，IPC 边界再转 Result
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
+import type { PlaybackSessionSnapshot, PlayMode } from '../../../shared/ipc-types'
 import { bilibiliApi } from '../api/clients/bilibili/api'
 import type { BilibiliAudioStream } from '../api/clients/bilibili/api'
+import {
+  loadPlaybackSession,
+  savePlaybackSession,
+} from '../config/playbackSession'
 import type { BilibiliVideoDetails } from '../../types/bilibili'
 import type { BilibiliApiError } from '../errors/bilibili'
 import { DatabaseError, FacadeError, ServiceError } from '../errors'
@@ -46,6 +51,18 @@ export type PlaybackFacadeError =
   | BilibiliApiError
   | ServiceError
   | DatabaseError
+
+/**
+ * 恢复的播放会话（主进程侧，Track 为 service 类型、时间戳 Date）
+ * IPC 边界（ipc/playback.ts）再转成 shared 的 RestoredPlaybackSession（number 时间戳）
+ */
+export interface RestoredPlaybackSessionMain {
+  tracks: Track[]
+  currentIndex: number
+  position: number
+  playMode: PlayMode
+  volume: number
+}
 
 /**
  * PlaybackFacade
@@ -207,6 +224,78 @@ export class PlaybackFacade {
       }
       return this.refreshAudioUrl(track)
     })
+  }
+
+  /**
+   * 保存播放会话快照（退出时由渲染进程回传）
+   * 写 userData/playback-session.json，失败包装为 FacadeError
+   */
+  saveSession(
+    snapshot: PlaybackSessionSnapshot,
+  ): ResultAsync<true, PlaybackFacadeError> {
+    return ResultAsync.fromPromise(
+      Promise.resolve().then(() => {
+        savePlaybackSession(snapshot)
+        return true as const
+      }),
+      (e) => {
+        logger.error('保存播放会话快照失败', { error: e })
+        return createFacadeError(
+          'PersistPlaybackSessionFailed',
+          '保存播放会话快照失败',
+          { cause: e },
+        )
+      },
+    )
+  }
+
+  /**
+   * 恢复播放会话（启动时由渲染进程查询）
+   *
+   * 流程：
+   * 1. 读快照：不存在 / 空 / 非法 → null
+   * 2. trackService.getTracksByIds 按 id 批量查回完整 Track（已删的自动跳过）
+   * 3. 索引修正：原 currentIndex 曲目被删 → 取其后第一个幸存曲目；再无则 0
+   * 4. 当前曲目被删时进度无意义，归零
+   */
+  restoreSession(): ResultAsync<RestoredPlaybackSessionMain | null, PlaybackFacadeError> {
+    const snapshot = loadPlaybackSession()
+    if (!snapshot || snapshot.trackIds.length === 0) {
+      return okAsync(null)
+    }
+    return this.trackService
+      .getTracksByIds(snapshot.trackIds)
+      .map((tracks): RestoredPlaybackSessionMain | null => {
+        if (tracks.length === 0) {
+          logger.warning('会话快照中的曲目全部失效，放弃恢复')
+          return null
+        }
+        // 索引修正：优先原当前曲目，被删则取其后第一个幸存曲目
+        const originalCurrentId = snapshot.trackIds[snapshot.currentIndex]
+        let fixedIndex = tracks.findIndex((t) => t.id === originalCurrentId)
+        if (fixedIndex === -1) {
+          for (let i = snapshot.currentIndex + 1; i < snapshot.trackIds.length; i++) {
+            const idx = tracks.findIndex((t) => t.id === snapshot.trackIds[i])
+            if (idx !== -1) {
+              fixedIndex = idx
+              break
+            }
+          }
+          if (fixedIndex === -1) fixedIndex = 0
+        }
+        const isOriginalCurrent = tracks[fixedIndex]?.id === originalCurrentId
+        const restored: RestoredPlaybackSessionMain = {
+          tracks,
+          currentIndex: fixedIndex,
+          position: isOriginalCurrent ? Math.max(0, snapshot.position) : 0,
+          playMode: snapshot.playMode,
+          volume: snapshot.volume,
+        }
+        logger.info(
+          `恢复播放会话（曲目数: ${restored.tracks.length}, 索引: ${restored.currentIndex}, 进度: ${Math.floor(restored.position)}s）`,
+        )
+        return restored
+      })
   }
 
   /**

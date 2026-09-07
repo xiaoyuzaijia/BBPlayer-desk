@@ -32,6 +32,9 @@ export const PLAYLIST_CHANNELS = {
 export const PLAYBACK_CHANNELS = {
   getAudioUrl: 'playback:getAudioUrl',
   refreshAudioUrl: 'playback:refreshAudioUrl',
+  saveSession: 'playback:saveSession', // 退出前渲染进程回传会话快照
+  restoreSession: 'playback:restoreSession', // 启动时恢复会话
+  saveSessionRequest: 'playback:saveSessionRequest', // 主→渲染 推送：退出前请求保存
 } as const
 
 export const HISTORY_CHANNELS = {

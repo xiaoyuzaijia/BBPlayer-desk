@@ -213,6 +213,34 @@ export interface LocalTrack extends BaseTrack {
 
 export type Track = BilibiliTrack | LocalTrack
 
+/**
+ * 播放模式（playback store 与主进程共享）
+ */
+export type PlayMode = 'all' | 'one' | 'shuffle'
+
+/**
+ * 播放会话快照（退出时落盘 userData/playback-session.json，恢复时读回）
+ * 只存 trackIds 列表，完整 Track 由主进程查 DB 组装（参考 BBPlayer GeneralStorage 方案）
+ */
+export interface PlaybackSessionSnapshot {
+  trackIds: number[]
+  currentIndex: number
+  position: number // 秒（float）
+  playMode: PlayMode
+  volume: number // 0-100
+}
+
+/**
+ * 恢复的播放会话（主进程已按 DB 过滤失效曲目并修正索引）
+ */
+export interface RestoredPlaybackSession {
+  tracks: Track[] // 按 trackIds 顺序、已过滤查不到的曲目
+  currentIndex: number // 原 currentIndex 曲目被删时已修正
+  position: number
+  playMode: PlayMode
+  volume: number
+}
+
 export interface Playlist {
   id: number
   title: string

@@ -25,6 +25,7 @@ release
 .idea
 .opencode
 .trae
+.zcode
 .DS_Store
 *.suo
 *.ntvs*
